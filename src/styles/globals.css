@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/*
+ * ES-brand design tokens — authoritatief gedefinieerd in docs/DESIGN_TOKENS.md.
+ * Tailwind v4 is CSS-first: tokens worden hier via @theme gedeclareerd, niet in
+ * een tailwind.config.ts. Elke --color-* / --font-* / --spacing-* naam wordt
+ * automatisch een utility (bv. --color-es-blue → bg-es-blue, text-es-blue).
+ */
+@theme {
+  --color-es-blue: #0077ff;
+  --color-es-magenta: #c92ec9;
+  --color-rm-gray: #6d6e71;
+  --color-rm-gray-light: #edf0f2;
+  --color-rm-dark: #1a1a2e;
+  --color-rm-border: #e0e4e8;
+  --color-rm-bg: #f8f9fb;
+  --color-rm-surface: #ffffff;
+
+  --color-status-ok: #10b981;
+  --color-status-warn: #f59e0b;
+  --color-status-error: #ef4444;
+
+  --font-display: "Red Hat Display", sans-serif;
+  --font-body: Lato, sans-serif;
+
+  --spacing-sidebar: 220px;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: #333;
+    background-color: var(--color-rm-bg);
+  }
+}

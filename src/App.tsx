@@ -1,0 +1,68 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthGate } from '@/auth/AuthGate'
+import { Layout } from '@/layout/Layout'
+import { Home } from '@/pages/Home'
+import { NotFound } from '@/pages/NotFound'
+import { FlightOverview } from '@/pages/_placeholders/FlightOverview'
+import { Cockpit } from '@/pages/_placeholders/Cockpit'
+import { NetworkView } from '@/pages/_placeholders/NetworkView'
+import { FareRecommender } from '@/pages/_placeholders/FareRecommender'
+import { WeeklyPerformance } from '@/pages/_placeholders/WeeklyPerformance'
+import { MonthlyPerformance } from '@/pages/_placeholders/MonthlyPerformance'
+import { DecisionSupport } from '@/pages/_placeholders/DecisionSupport'
+import { PerformanceAnalysis } from '@/pages/_placeholders/PerformanceAnalysis'
+import { CustomerAnalytics } from '@/pages/_placeholders/CustomerAnalytics'
+import { OperationalImpact } from '@/pages/_placeholders/OperationalImpact'
+import { MarginManagement } from '@/pages/_placeholders/MarginManagement'
+import { CompetitorIntel } from '@/pages/_placeholders/CompetitorIntel'
+import { DistributionChannels } from '@/pages/_placeholders/DistributionChannels'
+import { Overbooking } from '@/pages/_placeholders/Overbooking'
+import { Ancillary } from '@/pages/_placeholders/Ancillary'
+import { BudgetTargets } from '@/pages/_placeholders/BudgetTargets'
+import { AuditTrail } from '@/pages/_placeholders/AuditTrail'
+import { DecisionLog } from '@/pages/_placeholders/DecisionLog'
+import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <AuthGate>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
+
+            {/* Flight Optimization */}
+            <Route path="flight-overview" element={<FlightOverview />} />
+            <Route path="cockpit" element={<Cockpit />} />
+            <Route path="network-view" element={<NetworkView />} />
+            <Route path="fare-recommender" element={<FareRecommender />} />
+
+            {/* Business Overview */}
+            <Route path="weekly" element={<WeeklyPerformance />} />
+            <Route path="monthly" element={<MonthlyPerformance />} />
+            <Route path="decision-support" element={<DecisionSupport />} />
+            <Route path="performance-analysis" element={<PerformanceAnalysis />} />
+            <Route path="customer-analytics" element={<CustomerAnalytics />} />
+            <Route path="operational-impact" element={<OperationalImpact />} />
+            <Route path="margin-management" element={<MarginManagement />} />
+            <Route path="competitor-intel" element={<CompetitorIntel />} />
+
+            {/* Business Management */}
+            <Route path="distribution-channels" element={<DistributionChannels />} />
+            <Route path="overbooking" element={<Overbooking />} />
+            <Route path="ancillary" element={<Ancillary />} />
+            <Route path="budget-targets" element={<BudgetTargets />} />
+
+            {/* Settings */}
+            <Route path="audit" element={<AuditTrail />} />
+            <Route path="decision-log" element={<DecisionLog />} />
+            <Route path="approval-rules" element={<ApprovalRules />} />
+
+            {/* 404 fallback */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </AuthGate>
+    </BrowserRouter>
+  )
+}

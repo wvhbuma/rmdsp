@@ -2,12 +2,16 @@
 .DS_Store
 **/.DS_Store
 
-# Dependencies (voor straks)
+# Dependencies
 node_modules/
 
 # Build output
 dist/
 build/
+
+# Logs
+*.log
+npm-debug.log*
 
 # Environment files
 .env
@@ -18,3 +22,6 @@ build/
 .vscode/
 .idea/
 *.swp
+
+# TypeScript build info
+*.tsbuildinfo

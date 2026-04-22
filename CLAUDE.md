@@ -72,14 +72,14 @@ AZURE_SWA_URL= https://salmon-desert-09cfbed03.7.azurestaticapps.net
 GITHUB_REPO= wvhbuma/rmdsp
 
 # Entra External ID
-ENTRA_TENANT_NAME=<<< TODO Wolter: bv. revenuemindzes.onmicrosoft.com >>>
-ENTRA_TENANT_ID=<<< TODO Wolter: GUID >>>
-ENTRA_CLIENT_ID=<<< TODO Wolter: GUID >>>
-ENTRA_AUTHORITY_URL=<<< TODO Wolter: https://...ciamlogin.com/... >>>
-ENTRA_USER_FLOW=<<< TODO Wolter: bv. B2C_1_signupsignin >>>
+ENTRA_TENANT_NAME=rmdsptst.onmicrosoft.com
+ENTRA_TENANT_ID=7f0329b6-50e0-4856-ba05-0387348a4218
+ENTRA_AUTHORITY_URL=https://rmdsptst.ciamlogin.com/rmdsptst.onmicrosoft.com
+ENTRA_CLIENT_ID= 53ab06b5-a9d9-45ed-bd23-700d03f21400
+ENTRA_USER_FLOW=signupsignin
 
 # RAM API
-RAM_API_BASE_URL=https://ram-api-es-prd.azurewebsites.net
+RAM_API_BASE_URL=https://ram-api-es-acc.azurewebsites.net
 RAM_API_HEALTH_ENDPOINT=/health
 ```
 
