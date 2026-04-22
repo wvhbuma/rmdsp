@@ -116,6 +116,11 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Footer met versie + build-datum (DSP regel 2249 equivalent) */}
+      <div className="px-5 py-3 border-t border-rm-border text-[10px] text-rm-gray font-body">
+        v{__APP_VERSION__} · {__BUILD_DATE__}
+      </div>
     </aside>
   )
 }
