@@ -64,12 +64,12 @@ VITE_RAM_API_BASE_URL=
 
 ```
 # Azure
-AZURE_RESOURCE_GROUP=<<< TODO Wolter: bv. rg-ram-frontend-prd >>>
-AZURE_SWA_NAME=<<< TODO Wolter: bv. swa-ram-frontend-prd >>>
-AZURE_SWA_URL=<<< TODO Wolter: bv. <random>.azurestaticapps.net >>>
+AZURE_RESOURCE_GROUP= ram-rg-rm-tst
+AZURE_SWA_NAME= swa-rmdsp-tst
+AZURE_SWA_URL= https://salmon-desert-09cfbed03.7.azurestaticapps.net
 
 # GitHub
-GITHUB_REPO=<<< TODO Wolter: bv. revenuemindz/ram-frontend >>>
+GITHUB_REPO= wvhbuma/rmdsp
 
 # Entra External ID
 ENTRA_TENANT_NAME=<<< TODO Wolter: bv. revenuemindzes.onmicrosoft.com >>>
