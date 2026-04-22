@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom'
 import { getPageTitle } from '@/layout/pageTitles'
+import { useAuth } from '@/auth/useAuth'
 
 /*
  * De NL-geformatteerde datum recht-boven wordt op elke render opnieuw berekend.
@@ -15,6 +16,7 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('nl-NL', {
 
 export function Topbar() {
   const { pathname } = useLocation()
+  const { email, signOut } = useAuth()
   const title = getPageTitle(pathname)
   const today = DATE_FORMATTER.format(new Date())
 
@@ -25,11 +27,20 @@ export function Topbar() {
       </h1>
       <div className="flex items-center gap-5 shrink-0">
         <span className="font-body text-xs text-rm-gray">{today}</span>
-        {/* User-email slot — wordt ingevuld in stap 5 (MSAL). */}
-        <span
-          data-testid="topbar-user-slot"
-          className="font-body text-xs text-rm-gray"
-        />
+        {email && (
+          <span className="font-body text-xs text-rm-dark truncate max-w-[200px]">
+            {email}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            void signOut()
+          }}
+          className="font-display font-medium text-xs text-rm-gray hover:text-rm-dark transition-colors"
+        >
+          Uitloggen
+        </button>
       </div>
     </header>
   )

@@ -18,3 +18,56 @@ function optional(raw: string | undefined): string | null {
 export const RAM_API_BASE_URL: string | null = optional(
   import.meta.env.VITE_RAM_API_BASE_URL,
 )
+
+export const ENTRA_TENANT_NAME: string | null = optional(
+  import.meta.env.VITE_ENTRA_TENANT_NAME,
+)
+
+export const ENTRA_CLIENT_ID: string | null = optional(
+  import.meta.env.VITE_ENTRA_CLIENT_ID,
+)
+
+export const ENTRA_AUTHORITY_URL: string | null = optional(
+  import.meta.env.VITE_ENTRA_AUTHORITY_URL,
+)
+
+export const ENTRA_USER_FLOW: string | null = optional(
+  import.meta.env.VITE_ENTRA_USER_FLOW,
+)
+
+/*
+ * Type-guarded Entra-config voor MSAL. Gebruik binnen een `if` — de compiler
+ * weet dan dat alle velden `string` zijn en geen null.
+ */
+export type EntraConfig = {
+  tenantName: string
+  clientId: string
+  authorityUrl: string
+  userFlow: string
+}
+
+export function getEntraConfig(): EntraConfig | null {
+  if (
+    ENTRA_TENANT_NAME === null ||
+    ENTRA_CLIENT_ID === null ||
+    ENTRA_AUTHORITY_URL === null ||
+    ENTRA_USER_FLOW === null
+  ) {
+    return null
+  }
+  return {
+    tenantName: ENTRA_TENANT_NAME,
+    clientId: ENTRA_CLIENT_ID,
+    authorityUrl: ENTRA_AUTHORITY_URL,
+    userFlow: ENTRA_USER_FLOW,
+  }
+}
+
+export function missingEntraVars(): string[] {
+  const missing: string[] = []
+  if (ENTRA_TENANT_NAME === null) missing.push('VITE_ENTRA_TENANT_NAME')
+  if (ENTRA_CLIENT_ID === null) missing.push('VITE_ENTRA_CLIENT_ID')
+  if (ENTRA_AUTHORITY_URL === null) missing.push('VITE_ENTRA_AUTHORITY_URL')
+  if (ENTRA_USER_FLOW === null) missing.push('VITE_ENTRA_USER_FLOW')
+  return missing
+}

@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthGate } from '@/auth/AuthGate'
 import { Layout } from '@/layout/Layout'
 import { Home } from '@/pages/Home'
 import { NotFound } from '@/pages/NotFound'
@@ -25,41 +26,43 @@ import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
+      <AuthGate>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
 
-          {/* Flight Optimization */}
-          <Route path="flight-overview" element={<FlightOverview />} />
-          <Route path="cockpit" element={<Cockpit />} />
-          <Route path="network-view" element={<NetworkView />} />
-          <Route path="fare-recommender" element={<FareRecommender />} />
+            {/* Flight Optimization */}
+            <Route path="flight-overview" element={<FlightOverview />} />
+            <Route path="cockpit" element={<Cockpit />} />
+            <Route path="network-view" element={<NetworkView />} />
+            <Route path="fare-recommender" element={<FareRecommender />} />
 
-          {/* Business Overview */}
-          <Route path="weekly" element={<WeeklyPerformance />} />
-          <Route path="monthly" element={<MonthlyPerformance />} />
-          <Route path="decision-support" element={<DecisionSupport />} />
-          <Route path="performance-analysis" element={<PerformanceAnalysis />} />
-          <Route path="customer-analytics" element={<CustomerAnalytics />} />
-          <Route path="operational-impact" element={<OperationalImpact />} />
-          <Route path="margin-management" element={<MarginManagement />} />
-          <Route path="competitor-intel" element={<CompetitorIntel />} />
+            {/* Business Overview */}
+            <Route path="weekly" element={<WeeklyPerformance />} />
+            <Route path="monthly" element={<MonthlyPerformance />} />
+            <Route path="decision-support" element={<DecisionSupport />} />
+            <Route path="performance-analysis" element={<PerformanceAnalysis />} />
+            <Route path="customer-analytics" element={<CustomerAnalytics />} />
+            <Route path="operational-impact" element={<OperationalImpact />} />
+            <Route path="margin-management" element={<MarginManagement />} />
+            <Route path="competitor-intel" element={<CompetitorIntel />} />
 
-          {/* Business Management */}
-          <Route path="distribution-channels" element={<DistributionChannels />} />
-          <Route path="overbooking" element={<Overbooking />} />
-          <Route path="ancillary" element={<Ancillary />} />
-          <Route path="budget-targets" element={<BudgetTargets />} />
+            {/* Business Management */}
+            <Route path="distribution-channels" element={<DistributionChannels />} />
+            <Route path="overbooking" element={<Overbooking />} />
+            <Route path="ancillary" element={<Ancillary />} />
+            <Route path="budget-targets" element={<BudgetTargets />} />
 
-          {/* Settings */}
-          <Route path="audit" element={<AuditTrail />} />
-          <Route path="decision-log" element={<DecisionLog />} />
-          <Route path="approval-rules" element={<ApprovalRules />} />
+            {/* Settings */}
+            <Route path="audit" element={<AuditTrail />} />
+            <Route path="decision-log" element={<DecisionLog />} />
+            <Route path="approval-rules" element={<ApprovalRules />} />
 
-          {/* 404 fallback */}
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
+            {/* 404 fallback */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </AuthGate>
     </BrowserRouter>
   )
 }
