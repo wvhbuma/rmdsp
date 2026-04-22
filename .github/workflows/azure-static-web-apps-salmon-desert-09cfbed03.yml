@@ -35,6 +35,14 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          # Vite bakt VITE_*-vars tijdens build in; deze moeten dus beschikbaar
+          # zijn in de build-step zelf, niet in SWA Application Settings.
+          VITE_RAM_API_BASE_URL: ${{ secrets.VITE_RAM_API_BASE_URL }}
+          VITE_ENTRA_TENANT_NAME: ${{ secrets.VITE_ENTRA_TENANT_NAME }}
+          VITE_ENTRA_CLIENT_ID: ${{ secrets.VITE_ENTRA_CLIENT_ID }}
+          VITE_ENTRA_AUTHORITY_URL: ${{ secrets.VITE_ENTRA_AUTHORITY_URL }}
+          VITE_ENTRA_USER_FLOW: ${{ secrets.VITE_ENTRA_USER_FLOW }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_DESERT_09CFBED03 }}
           action: "upload"
