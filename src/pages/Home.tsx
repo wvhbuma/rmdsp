@@ -1,9 +1,10 @@
 import { Icon } from '@/layout/icons'
+import { SystemStatus } from '@/components/SystemStatus'
 
 export function Home() {
   return (
     <div className="p-8">
-      <section className="max-w-3xl mx-auto text-center pt-16 pb-12">
+      <section className="max-w-3xl mx-auto text-center pt-16 pb-8">
         <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-es-blue to-es-magenta flex items-center justify-center text-white shadow-sm">
           <Icon name="clock" className="w-8 h-8" />
         </div>
@@ -15,6 +16,10 @@ export function Home() {
           European Sleeper. Gebruik de navigatie links om naar een module te
           gaan.
         </p>
+      </section>
+
+      <section className="max-w-3xl mx-auto">
+        <SystemStatus />
       </section>
     </div>
   )
