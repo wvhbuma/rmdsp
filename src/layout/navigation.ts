@@ -93,16 +93,16 @@ export const NAV_GROUPS: NavGroup[] = [
           { label: 'Competitor Intel', path: '/competitor-intel', icon: 'eye' },
         ],
       },
-    ],
-  },
-  {
-    key: 'multi-leg-analysis',
-    label: 'Multi-Leg Analysis',
-    icon: 'git-merge',
-    children: [
-      { label: 'Displacement Reporting', path: '/displacement', icon: 'pie-chart', end: true },
-      { label: 'Monthly Details', path: '/displacement/monthly', icon: 'crosshair' },
-      { label: 'Departure Details', path: '/displacement/departures', icon: 'thermometer' },
+      {
+        key: 'bo-multileg',
+        label: 'Multi-Leg',
+        icon: 'git-merge',
+        items: [
+          { label: 'Displacement Reporting', path: '/displacement', icon: 'pie-chart', end: true },
+          { label: 'Monthly Details', path: '/displacement/monthly', icon: 'crosshair' },
+          { label: 'Departure Details', path: '/displacement/departures', icon: 'thermometer' },
+        ],
+      },
     ],
   },
   {
