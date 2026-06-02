@@ -32,6 +32,10 @@ export type IconName =
   | 'check-square'
   | 'check'
   | 'chevron-down'
+  | 'git-merge'
+  | 'pie-chart'
+  | 'crosshair'
+  | 'thermometer'
 
 const ICONS: Record<IconName, ReactElement> = {
   home: (
@@ -200,6 +204,33 @@ const ICONS: Record<IconName, ReactElement> = {
   ),
   check: <polyline points="20 6 9 17 4 12" />,
   'chevron-down': <polyline points="6 9 12 15 18 9" />,
+  'git-merge': (
+    <>
+      <circle cx="18" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <path d="M6 21V9a9 9 0 0 0 9 9" />
+    </>
+  ),
+  'pie-chart': (
+    <>
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </>
+  ),
+  crosshair: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="22" y1="12" x2="18" y2="12" />
+      <line x1="6" y1="12" x2="2" y2="12" />
+      <line x1="12" y1="6" x2="12" y2="2" />
+      <line x1="12" y1="22" x2="12" y2="18" />
+    </>
+  ),
+  thermometer: (
+    <>
+      <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+    </>
+  ),
 }
 
 type IconProps = {

@@ -161,7 +161,7 @@ function LeafLink({
 }) {
   const className = indent === 'sub' ? subItemClass : leafClass
   return (
-    <NavLink to={leaf.path} className={className}>
+    <NavLink to={leaf.path} end={leaf.end} className={className}>
       <Icon name={leaf.icon} className="w-[16px] h-[16px] shrink-0" />
       <span>{leaf.label}</span>
     </NavLink>
