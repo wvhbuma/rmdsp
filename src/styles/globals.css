@@ -20,6 +20,20 @@
   --color-status-warn: #f59e0b;
   --color-status-error: #ef4444;
 
+  /* Displacement: cabin-kleuren (zie config/displacement.ts CABIN_COLORS) */
+  --color-cabin-sea: #0d9e4f;
+  --color-cabin-cht: #0077ff;
+  --color-cabin-cmf: #e07a00;
+  --color-cabin-slp: #c92ec9;
+
+  /* Displacement: villain/victim + load-factor heatmap-buckets */
+  --color-villain: #d63031;
+  --color-victim: #0d9e4f;
+  --color-lf-green: #0d9e4f;
+  --color-lf-amber: #d9a400;
+  --color-lf-orange: #e07a00;
+  --color-lf-red: #d63031;
+
   --font-display: "Red Hat Display", sans-serif;
   --font-body: Lato, sans-serif;
 
