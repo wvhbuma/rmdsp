@@ -51,6 +51,8 @@ export const STATION_SHORT: Record<string, string> = {
   UL: 'UL',
   PH: 'PH',
   PRA: 'PRA',
+  PNO: 'PNO',
+  MIL: 'MIL',
 }
 
 /** ES-merkkleuren + displacement-specifieke kleuren (zie prompt-spec). */

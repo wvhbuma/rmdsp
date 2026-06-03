@@ -18,10 +18,10 @@ import {
 import {
   listYears,
   monthsForYear,
-  routesForMarket,
   type DisplacementFilter,
   type PeriodMode,
 } from '@/utils/displacement'
+import { ROUTE_CONFIG, visibleDirections } from '@/config/routes'
 import { Icon } from '@/layout/icons'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 
@@ -56,14 +56,19 @@ export function FilterBar({ data, value, onChange, periodMode }: FilterBarProps)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [openKey])
 
-  // Route Assignment (User Preferences): alleen toegewezen markten/richtingen tonen.
-  const { isMarketEnabled, isDirectionEnabled } = useUserPreferences()
+  // Route Assignment (User Preferences): alleen toegewezen routes tonen.
+  const { isRouteEnabled } = useUserPreferences()
 
   const years = listYears(data.months)
   const availableMonths = monthsForYear(data.months, value.year)
   const cabins = sortCabins(data.cabins)
-  const markets = data.markets.filter(isMarketEnabled)
-  const routes = routesForMarket(data, value.market).filter(isDirectionEnabled)
+  // Routes (top-laag) die zowel in de data zitten als toegewezen zijn.
+  const markets = data.markets.filter(isRouteEnabled)
+  // Zichtbare richtingen uit ROUTE_CONFIG (verborgen detour-MarketIDs niet
+  // getoond); val terug op data.routes voor routes buiten de catalogus.
+  const routes = ROUTE_CONFIG[value.market]
+    ? visibleDirections(value.market)
+    : (data.routes[value.market] ?? [])
 
   function patch(next: Partial<DisplacementFilter>) {
     onChange({ ...value, ...next })
@@ -100,7 +105,7 @@ export function FilterBar({ data, value, onChange, periodMode }: FilterBarProps)
         isOpen={openKey === 'route'}
         onToggle={() => setOpenKey(openKey === 'route' ? null : 'route')}
       >
-        <PanelSection title="Markt">
+        <PanelSection title="Route">
           {markets.length === 0 && (
             <div className="px-3 py-1.5 font-body text-xs text-rm-gray">
               Geen routes toegewezen — zie User Preferences.

@@ -12,6 +12,7 @@ import type {
   DisplacementResponse,
   DisplacementSummary,
 } from '@/types/displacement'
+import { marketsForDirection } from '@/config/routes'
 
 export type PeriodMode = 'multi' | 'single'
 
@@ -93,13 +94,26 @@ interface RowLike {
   month: string
 }
 
+/*
+ * De MarketIDs waarop een gekozen richting filtert. 'all' → null (geen
+ * richting-constraint, alleen de route/markt telt). Een specifieke richting →
+ * die richting + bijbehorende verborgen MarketIDs (bv. de Paris-omleiding).
+ */
+export function allowedRouteMarkets(
+  filter: DisplacementFilter,
+): Set<string> | null {
+  if (filter.route === 'all') return null
+  return new Set(marketsForDirection(filter.market, filter.route))
+}
+
 function matchesBase(
   row: RowLike,
   filter: DisplacementFilter,
   months: Set<string>,
+  allowed: Set<string> | null,
 ): boolean {
   if (filter.market && row.market !== filter.market) return false
-  if (filter.route !== 'all' && row.route !== filter.route) return false
+  if (allowed && !allowed.has(row.route)) return false
   if (!months.has(row.month)) return false
   return true
 }
@@ -114,7 +128,8 @@ export function filterSummary(
   months: Set<string>,
 ): DisplacementSummary[] {
   // Summary heeft geen cabin-dimensie (bed/seat zit in de kolommen zelf).
-  return data.summary.filter((r) => matchesBase(r, filter, months))
+  const allowed = allowedRouteMarkets(filter)
+  return data.summary.filter((r) => matchesBase(r, filter, months, allowed))
 }
 
 export function filterDepartures(
@@ -122,8 +137,9 @@ export function filterDepartures(
   filter: DisplacementFilter,
   months: Set<string>,
 ): DisplacementDeparture[] {
+  const allowed = allowedRouteMarkets(filter)
   return data.departures.filter(
-    (r) => matchesBase(r, filter, months) && matchesCabin(r.cabin, filter),
+    (r) => matchesBase(r, filter, months, allowed) && matchesCabin(r.cabin, filter),
   )
 }
 
@@ -132,8 +148,9 @@ export function filterOd(
   filter: DisplacementFilter,
   months: Set<string>,
 ): DisplacementOD[] {
+  const allowed = allowedRouteMarkets(filter)
   return data.od.filter(
-    (r) => matchesBase(r, filter, months) && matchesCabin(r.cabin, filter),
+    (r) => matchesBase(r, filter, months, allowed) && matchesCabin(r.cabin, filter),
   )
 }
 
@@ -142,8 +159,9 @@ export function filterLegs(
   filter: DisplacementFilter,
   months: Set<string>,
 ): DisplacementLeg[] {
+  const allowed = allowedRouteMarkets(filter)
   return data.legs.filter(
-    (r) => matchesBase(r, filter, months) && matchesCabin(r.cabin, filter),
+    (r) => matchesBase(r, filter, months, allowed) && matchesCabin(r.cabin, filter),
   )
 }
 
