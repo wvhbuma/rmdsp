@@ -23,6 +23,7 @@ import {
   type PeriodMode,
 } from '@/utils/displacement'
 import { Icon } from '@/layout/icons'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 /** "BEMI-PRA" → "BRU → PRA". */
 function formatRouteCode(code: string): string {
@@ -55,10 +56,14 @@ export function FilterBar({ data, value, onChange, periodMode }: FilterBarProps)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [openKey])
 
+  // Route Assignment (User Preferences): alleen toegewezen markten/richtingen tonen.
+  const { isMarketEnabled, isDirectionEnabled } = useUserPreferences()
+
   const years = listYears(data.months)
   const availableMonths = monthsForYear(data.months, value.year)
   const cabins = sortCabins(data.cabins)
-  const routes = routesForMarket(data, value.market)
+  const markets = data.markets.filter(isMarketEnabled)
+  const routes = routesForMarket(data, value.market).filter(isDirectionEnabled)
 
   function patch(next: Partial<DisplacementFilter>) {
     onChange({ ...value, ...next })
@@ -96,7 +101,12 @@ export function FilterBar({ data, value, onChange, periodMode }: FilterBarProps)
         onToggle={() => setOpenKey(openKey === 'route' ? null : 'route')}
       >
         <PanelSection title="Markt">
-          {data.markets.map((m) => (
+          {markets.length === 0 && (
+            <div className="px-3 py-1.5 font-body text-xs text-rm-gray">
+              Geen routes toegewezen — zie User Preferences.
+            </div>
+          )}
+          {markets.map((m) => (
             <RadioRow
               key={m}
               label={m}
