@@ -21,11 +21,8 @@ import { KpiCard } from '@/components/displacement/KpiCard'
 import { SectionCard } from '@/components/displacement/SectionCard'
 import { EChart } from '@/components/displacement/EChart'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from '@/components/displacement/StateViews'
+import { ErrorState, LoadingState } from '@/components/displacement/StateViews'
+import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 const ALL = 'all'
 
@@ -35,9 +32,7 @@ export function SeasonSimulation() {
   if (query.isPending) return <LoadingState label="Simulatie laden…" />
   if (query.isError) return <ErrorState message={query.error.message} />
   if (query.data.sim.length === 0) {
-    return (
-      <EmptyState message="Nog geen simulatie. Maak eerst een seizoen aan via New Season." />
-    )
+    return <NoSeasonData message="Nog geen simulatie." />
   }
 
   return <SimulationView sim={query.data.sim} />

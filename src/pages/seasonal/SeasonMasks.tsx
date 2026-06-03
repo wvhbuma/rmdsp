@@ -21,6 +21,7 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/displacement/StateViews'
+import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 const ALL = 'all'
 
@@ -30,9 +31,7 @@ export function SeasonMasks() {
   if (query.isPending) return <LoadingState label="Maskers laden…" />
   if (query.isError) return <ErrorState message={query.error.message} />
   if (query.data.masks.length === 0) {
-    return (
-      <EmptyState message="Nog geen maskers. Maak eerst een seizoen aan via New Season." />
-    )
+    return <NoSeasonData message="Nog geen maskers." />
   }
 
   return <MasksView masks={query.data.masks} />

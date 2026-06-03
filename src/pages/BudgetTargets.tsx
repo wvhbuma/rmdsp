@@ -19,6 +19,7 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/displacement/StateViews'
+import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 import { ProfileBadge } from '@/components/seasonal/ProfileBadge'
 import { BindingBadge } from '@/components/seasonal/BindingBadge'
 import { GapFillBadge } from '@/components/seasonal/GapFillBadge'
@@ -29,9 +30,7 @@ export function BudgetTargets() {
   if (query.isPending) return <LoadingState label="Targets laden…" />
   if (query.isError) return <ErrorState message={query.error.message} />
   if (query.data.targets.length === 0) {
-    return (
-      <EmptyState message="Nog geen targets. Maak eerst een seizoen aan via New Season." />
-    )
+    return <NoSeasonData message="Nog geen targets." />
   }
 
   return <TargetsView targets={query.data.targets} />
@@ -215,7 +214,7 @@ function RouteSummaryTable({ targets }: { targets: SeasonalTarget[] }) {
               <tr key={r} className="border-t border-rm-border hover:bg-rm-gray-light/50">
                 <td className="px-3 py-1.5 text-left font-medium text-rm-dark">{r}</td>
                 <td className="px-3 py-1.5 text-rm-gray">{formatNumber(a.units)}</td>
-                <td className="px-3 py-1.5 text-rm-gray">{formatLf(lf)}</td>
+                <td className="px-3 py-1.5 text-rm-gray">{formatLf(lf, 1)}</td>
                 <td className="px-3 py-1.5 text-rm-gray">{formatCurrency(yld)}</td>
                 <td className="px-3 py-1.5 text-rm-dark">{formatCurrency(a.revenue)}</td>
                 <td className="px-3 py-1.5 text-rm-gray">{idx === null ? '—' : idx}</td>
@@ -231,16 +230,15 @@ function RouteSummaryTable({ targets }: { targets: SeasonalTarget[] }) {
 /* ── Target-detail (PY links, target rechts) ────────────────────────────── */
 
 function TargetDetailTable({ targets }: { targets: SeasonalTarget[] }) {
-  const rows = useMemo(
-    () =>
-      [...targets].sort(
-        (a, b) =>
-          a.market.localeCompare(b.market) ||
-          a.departureDate.localeCompare(b.departureDate) ||
-          a.modelCabin.localeCompare(b.modelCabin),
-      ),
-    [targets],
-  )
+  const rows = useMemo(() => {
+    const order = CABIN_ORDER as readonly string[]
+    return [...targets].sort(
+      (a, b) =>
+        a.market.localeCompare(b.market) ||
+        a.departureDate.localeCompare(b.departureDate) ||
+        order.indexOf(a.modelCabin) - order.indexOf(b.modelCabin),
+    )
+  }, [targets])
 
   return (
     <div className="overflow-x-auto rounded-lg border border-rm-border">
@@ -272,14 +270,14 @@ function TargetDetailTable({ targets }: { targets: SeasonalTarget[] }) {
               <td className="px-3 py-1.5 text-left text-rm-gray">{t.market}</td>
               <td className="px-3 py-1.5 text-left text-rm-gray">{CABIN_LABELS[t.modelCabin] ?? t.modelCabin}</td>
               <td className="bg-rm-bg px-3 py-1.5 text-rm-gray">{formatNumber(t.pyUnitsSold)}</td>
-              <td className="bg-rm-bg px-3 py-1.5 text-rm-gray">{formatLf(t.pyLf)}</td>
+              <td className="bg-rm-bg px-3 py-1.5 text-rm-gray">{formatLf(t.pyLf, 1)}</td>
               <td className="bg-rm-bg px-3 py-1.5 text-rm-gray">{formatCurrency(t.pyYield)}</td>
               <td className="bg-rm-bg px-3 py-1.5 text-rm-gray">{formatCurrency(t.pyRevenue)}</td>
               <td className="bg-rm-bg px-3 py-1.5 text-left">
                 <GapFillBadge method={t.pyGapFill} />
               </td>
               <td className="px-3 py-1.5 text-rm-dark">{formatNumber(t.targetUnits)}</td>
-              <td className="px-3 py-1.5 text-rm-dark">{formatLf(t.targetLf)}</td>
+              <td className="px-3 py-1.5 text-rm-dark">{formatLf(t.targetLf, 1)}</td>
               <td className="px-3 py-1.5 text-rm-dark">{formatCurrency(t.targetYield)}</td>
               <td className="px-3 py-1.5 font-medium text-rm-dark">{formatCurrency(t.targetRevenue)}</td>
               <td className="px-3 py-1.5 text-rm-gray">{formatCurrency(t.targetRau)}</td>

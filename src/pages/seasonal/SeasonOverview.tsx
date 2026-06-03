@@ -22,11 +22,8 @@ import {
 import { KpiCard } from '@/components/displacement/KpiCard'
 import { SectionCard } from '@/components/displacement/SectionCard'
 import { EChart } from '@/components/displacement/EChart'
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from '@/components/displacement/StateViews'
+import { ErrorState, LoadingState } from '@/components/displacement/StateViews'
+import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 export function SeasonOverview() {
   const query = useSeasonalResults()
@@ -34,9 +31,7 @@ export function SeasonOverview() {
   if (query.isPending) return <LoadingState label="Resultaten laden…" />
   if (query.isError) return <ErrorState message={query.error.message} />
   if (query.data.targets.length === 0) {
-    return (
-      <EmptyState message="Nog geen targets. Maak eerst een seizoen aan via New Season." />
-    )
+    return <NoSeasonData message="Nog geen targets." />
   }
 
   return <OverviewView targets={query.data.targets} />
@@ -115,10 +110,14 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
     () => groupBy(targets, (t) => `${t.market}__${t.modelCabin}`),
     [targets],
   )
-  const routeCabinKeys = useMemo(
-    () => [...byRouteCabin.keys()].sort(),
-    [byRouteCabin],
-  )
+  const routeCabinKeys = useMemo(() => {
+    const order = CABIN_ORDER as readonly string[]
+    return [...byRouteCabin.keys()].sort((a, b) => {
+      const [ma, ca] = a.split('__')
+      const [mb, cb] = b.split('__')
+      return ma.localeCompare(mb) || order.indexOf(ca) - order.indexOf(cb)
+    })
+  }, [byRouteCabin])
 
   const revenueOption = useMemo(
     () => buildRevenueBar(presentCabins, byCabin),
@@ -135,7 +134,7 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
         <KpiCard label="Vertrekken" value={formatNumber(departures)} />
         <KpiCard label="Target units" value={formatNumber(total.units)} />
-        <KpiCard label="Load factor" value={formatLf(lf(total))} />
+        <KpiCard label="Load factor" value={formatLf(lf(total), 1)} />
         <KpiCard label="Yield" value={formatCurrency(yld(total))} />
         <KpiCard label="Revenue" value={formatCurrencyCompact(total.revenue)} accent="blue" />
         <KpiCard label="RAU" value={formatCurrency(rau(total))} />
@@ -168,7 +167,7 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
                 cells={[
                   CABIN_LABELS[c] ?? c,
                   formatNumber(a.units),
-                  formatLf(lf(a)),
+                  formatLf(lf(a), 1),
                   formatCurrency(yld(a)),
                   formatCurrency(a.revenue),
                   formatCurrency(rau(a)),
@@ -191,7 +190,7 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
                 cells={[
                   monthLabel(m),
                   formatNumber(a.units),
-                  formatLf(lf(a)),
+                  formatLf(lf(a), 1),
                   formatCurrency(yld(a)),
                   formatCurrency(a.revenue),
                 ]}
@@ -214,7 +213,7 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
                   market,
                   CABIN_LABELS[cabin] ?? cabin,
                   formatNumber(a.units),
-                  formatLf(lf(a)),
+                  formatLf(lf(a), 1),
                   formatCurrency(yld(a)),
                   formatCurrency(a.revenue),
                 ]}
