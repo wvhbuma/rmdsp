@@ -19,6 +19,7 @@ import type {
   PipelineResponse,
   RunPipelineArgs,
   SeasonalResults,
+  SeasonalSession,
 } from '@/types/seasonal'
 
 export function useDiscoverRoutes(
@@ -38,6 +39,14 @@ export function useSeasonalResults(): UseQueryResult<SeasonalResults, Error> {
     queryKey: ['seasonal', 'results'],
     queryFn: ({ signal }) => api.fetchResults(signal),
     staleTime: 60_000,
+  })
+}
+
+export function useSeasonalSessions(): UseQueryResult<SeasonalSession[], Error> {
+  return useQuery({
+    queryKey: ['seasonal', 'sessions'],
+    queryFn: ({ signal }) => api.fetchSessions(signal),
+    staleTime: 5 * 60_000,
   })
 }
 

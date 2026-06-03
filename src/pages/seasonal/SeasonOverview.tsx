@@ -28,10 +28,12 @@ import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 export function SeasonOverview() {
   const query = useSeasonalResults()
 
-  if (query.isPending) return <LoadingState label="Resultaten laden…" />
-  if (query.isError) return <ErrorState message={query.error.message} />
+  if (query.isPending) return <LoadingState label="Loading results…" />
+  if (query.isError) {
+    return <ErrorState title="Could not load seasonal data" message={query.error.message} />
+  }
   if (query.data.targets.length === 0) {
-    return <NoSeasonData message="Nog geen targets." />
+    return <NoSeasonData message="No targets yet." />
   }
 
   return <OverviewView targets={query.data.targets} />
@@ -43,24 +45,34 @@ interface Agg {
   units: number
   revenue: number
   capacity: number
+  pyUnits: number
   pyRevenue: number
+  pyCapacity: number
 }
 
 function emptyAgg(): Agg {
-  return { units: 0, revenue: 0, capacity: 0, pyRevenue: 0 }
+  return { units: 0, revenue: 0, capacity: 0, pyUnits: 0, pyRevenue: 0, pyCapacity: 0 }
 }
 
 function addTarget(agg: Agg, t: SeasonalTarget): void {
   agg.units += t.targetUnits
   agg.revenue += t.targetRevenue
   agg.capacity += t.capacity
+  agg.pyUnits += t.pyUnitsSold
   agg.pyRevenue += t.pyRevenue
+  // PY-capaciteit afgeleid uit units / load factor (pyLf), guard tegen 0.
+  agg.pyCapacity += t.pyLf > 0 ? t.pyUnitsSold / t.pyLf : 0
 }
 
 const lf = (a: Agg) => (a.capacity > 0 ? a.units / a.capacity : 0)
 const yld = (a: Agg) => (a.units > 0 ? a.revenue / a.units : 0)
 const rau = (a: Agg) => (a.capacity > 0 ? a.revenue / a.capacity : 0)
 const pyIndex = (a: Agg) => (a.pyRevenue > 0 ? (a.revenue / a.pyRevenue) * 100 : 0)
+
+/** Index = CY / PY × 100 (100 = gelijk aan vorig jaar). null als geen PY-basis. */
+function index(cy: number, py: number): number | null {
+  return py > 0 ? (cy / py) * 100 : null
+}
 
 function groupBy(
   targets: SeasonalTarget[],
@@ -83,7 +95,7 @@ function monthKey(dateStr: string): string {
 function monthLabel(key: string): string {
   const d = new Date(`${key}-01T00:00:00`)
   if (Number.isNaN(d.getTime())) return key
-  return new Intl.DateTimeFormat('nl-NL', { month: 'short', year: 'numeric' }).format(d)
+  return new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' }).format(d)
 }
 
 function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
@@ -128,22 +140,38 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
     [presentCabins, byCabin],
   )
 
+  // Indices vs PY (CY / PY × 100).
+  const capacityIndex = index(total.capacity, total.pyCapacity)
+  const unitsIndex = index(total.units, total.pyUnits)
+  const yieldIndex = index(yld(total), total.pyUnits > 0 ? total.pyRevenue / total.pyUnits : 0)
+  const revenueIndex = index(total.revenue, total.pyRevenue)
+  const rauIndex = index(rau(total), total.pyCapacity > 0 ? total.pyRevenue / total.pyCapacity : 0)
+
   return (
     <div className="space-y-6 p-6">
-      {/* KPI's */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-        <KpiCard label="Vertrekken" value={formatNumber(departures)} />
+        <KpiCard label="Departures" value={formatNumber(departures)} />
         <KpiCard label="Target units" value={formatNumber(total.units)} />
         <KpiCard label="Load factor" value={formatLf(lf(total), 1)} />
         <KpiCard label="Yield" value={formatCurrency(yld(total))} />
         <KpiCard label="Revenue" value={formatCurrencyCompact(total.revenue)} accent="blue" />
         <KpiCard label="RAU" value={formatCurrency(rau(total))} />
-        <KpiCard
-          label="vs PY revenue"
-          value={total.pyRevenue > 0 ? `${Math.round(pyIndex(total))}` : '—'}
-          sub="index (PY = 100)"
-          accent="magenta"
-        />
+        <IndexCard label="Revenue Index vs PY" idx={revenueIndex} />
+      </div>
+
+      {/* Indices vs PY */}
+      <div>
+        <h2 className="mb-2 font-display font-semibold text-sm text-rm-dark">
+          Indices vs PY
+        </h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+          <IndexCard label="Capacity Index" idx={capacityIndex} />
+          <IndexCard label="Units Index" idx={unitsIndex} />
+          <IndexCard label="Yield Index" idx={yieldIndex} />
+          <IndexCard label="Revenue Index" idx={revenueIndex} />
+          <IndexCard label="RAU Index" idx={rauIndex} />
+        </div>
       </div>
 
       {/* Charts */}
@@ -151,7 +179,7 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
         <SectionCard title="Revenue per cabin" className="lg:col-span-2">
           <EChart option={revenueOption} className="h-72" />
         </SectionCard>
-        <SectionCard title="Units per cabin" subtitle="Aandeel van de target-units">
+        <SectionCard title="Units per cabin" subtitle="Share of target units">
           <EChart option={unitsOption} className="h-72" />
         </SectionCard>
       </div>
@@ -179,9 +207,9 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
         </Table>
       </SectionCard>
 
-      {/* Per maand */}
-      <SectionCard title="Per maand">
-        <Table head={['Maand', 'Units', 'LF', 'Yield', 'Revenue']}>
+      {/* Per month */}
+      <SectionCard title="Per month">
+        <Table head={['Month', 'Units', 'LF', 'Yield', 'Revenue']}>
           {monthKeys.map((m) => {
             const a = byMonth.get(m)!
             return (
@@ -226,7 +254,17 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
   )
 }
 
-/* ── Tabellen ───────────────────────────────────────────────────────────── */
+/* ── Index-card (groen ≥100, rood <100) ─────────────────────────────────── */
+
+function IndexCard({ label, idx }: { label: string; idx: number | null }) {
+  if (idx === null) return <KpiCard label={label} value="—" />
+  const rounded = Math.round(idx)
+  return (
+    <KpiCard label={label} value={String(rounded)} accent={rounded >= 100 ? 'green' : 'red'} />
+  )
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
 
 function Table({ head, children }: { head: string[]; children: ReactNode }) {
   return (

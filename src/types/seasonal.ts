@@ -147,8 +147,11 @@ export interface RunPipelineArgs {
   config?: Partial<SeasonalConfig>
 }
 
+/*
+ * Geen apiKey hier: de RAM API key zit server-side (env RAM_API_KEY) en wordt
+ * door het Flask implement-endpoint afgehandeld. De frontend stuurt 'm niet mee.
+ */
 export interface ImplementArgs {
-  apiKey: string
   routes?: string[]
   cabins?: string[]
   dryRun?: boolean
@@ -160,4 +163,12 @@ export interface ImplementResult {
   pushed: number
   skipped: number
   log: string[]
+}
+
+/** Een bestaand seizoen (Excel-bestand) zoals opgelijst door /api/seasonal/sessions. */
+export interface SeasonalSession {
+  name: string
+  file?: string
+  modified?: string
+  products?: number
 }

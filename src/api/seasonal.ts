@@ -16,6 +16,7 @@ import type {
   PipelineResponse,
   RunPipelineArgs,
   SeasonalResults,
+  SeasonalSession,
 } from '@/types/seasonal'
 
 const BASE = SEASONAL_API_BASE_URL ?? 'http://localhost:5050'
@@ -78,14 +79,21 @@ export function fetchResults(signal?: AbortSignal): Promise<SeasonalResults> {
   return getJson<SeasonalResults>('/api/seasonal/results/latest', signal)
 }
 
+/** Bestaande seizoenen (Excel-bestanden in ~/Seasonal Planning/). */
+export function fetchSessions(signal?: AbortSignal): Promise<SeasonalSession[]> {
+  return getJson<SeasonalSession[]>('/api/seasonal/sessions', signal)
+}
+
+/*
+ * De API key wordt NIET meegestuurd: de Flask server gebruikt de server-side
+ * env var RAM_API_KEY.
+ */
 export function implementFares({
-  apiKey,
   routes,
   cabins,
   dryRun = true,
 }: ImplementArgs): Promise<ImplementResult> {
   return postJson<ImplementResult>('/api/seasonal/implement', {
-    api_key: apiKey,
     routes,
     cabins,
     dry_run: dryRun,

@@ -29,10 +29,12 @@ const ALL = 'all'
 export function SeasonSimulation() {
   const query = useSeasonalResults()
 
-  if (query.isPending) return <LoadingState label="Simulatie laden…" />
-  if (query.isError) return <ErrorState message={query.error.message} />
+  if (query.isPending) return <LoadingState label="Loading simulation…" />
+  if (query.isError) {
+    return <ErrorState title="Could not load seasonal data" message={query.error.message} />
+  }
   if (query.data.sim.length === 0) {
-    return <NoSeasonData message="Nog geen simulatie." />
+    return <NoSeasonData message="No simulation yet." />
   }
 
   return <SimulationView sim={query.data.sim} />
@@ -106,13 +108,13 @@ function SimulationView({ sim }: { sim: SeasonalSimulation[] }) {
     <div className="space-y-6 p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display font-bold text-xl text-rm-dark">Simulatie</h1>
+          <h1 className="font-display font-bold text-xl text-rm-dark">Simulation</h1>
           <p className="font-body text-sm text-rm-gray">
-            Bottom-up fill-simulatie t.o.v. naïeve en full-capacity revenue.
+            Bottom-up fill simulation vs naïve and full-capacity revenue.
           </p>
         </div>
         <SelectFilter label="Route" value={route} onChange={setRoute}>
-          <option value={ALL}>Alle</option>
+          <option value={ALL}>All</option>
           {markets.map((m) => (
             <option key={m} value={m}>
               {m}
@@ -122,17 +124,17 @@ function SimulationView({ sim }: { sim: SeasonalSimulation[] }) {
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Naïef revenue" value={formatCurrencyCompact(totals.naive)} />
+        <KpiCard label="Naïve revenue" value={formatCurrencyCompact(totals.naive)} />
         <KpiCard label="Sim revenue" value={formatCurrencyCompact(totals.simRev)} accent="blue" />
         <KpiCard label="Full-cap revenue" value={formatCurrencyCompact(totals.full)} />
         <KpiCard
-          label="Sim vs naïef"
+          label="Sim vs naïve"
           value={formatPct(totalDelta)}
-          accent={totalDelta >= 0 ? 'blue' : 'red'}
+          accent={totalDelta >= 0 ? 'green' : 'red'}
         />
       </div>
 
-      <SectionCard title="Revenue per cabin" subtitle="Naïef vs sim vs full-cap">
+      <SectionCard title="Revenue per cabin" subtitle="Naïve vs sim vs full-cap">
         <EChart option={chartOption} className="h-72" />
       </SectionCard>
 
@@ -143,7 +145,7 @@ function SimulationView({ sim }: { sim: SeasonalSimulation[] }) {
               <th className="px-3 py-2 text-left font-display font-semibold">Cabin</th>
               <th className="px-3 py-2 font-display font-semibold">N</th>
               <th className="px-3 py-2 font-display font-semibold">Units</th>
-              <th className="px-3 py-2 font-display font-semibold">Naïef rev</th>
+              <th className="px-3 py-2 font-display font-semibold">Naïve rev</th>
               <th className="px-3 py-2 font-display font-semibold">Sim rev</th>
               <th className="px-3 py-2 font-display font-semibold">Sim yield</th>
               <th className="px-3 py-2 font-display font-semibold">Delta%</th>
@@ -174,7 +176,7 @@ function SimulationView({ sim }: { sim: SeasonalSimulation[] }) {
         </table>
       </SectionCard>
 
-      <SectionCard title="Detail per vertrek" subtitle="Gesorteerd op revenue-delta">
+      <SectionCard title="Detail per departure" subtitle="Sorted by revenue delta">
         <div className="overflow-x-auto rounded-lg border border-rm-border">
           <table className="w-full border-collapse whitespace-nowrap text-right font-body text-[13px]">
             <thead>
@@ -183,7 +185,7 @@ function SimulationView({ sim }: { sim: SeasonalSimulation[] }) {
                 <th className="px-3 py-2 text-left font-display font-semibold">Cabin</th>
                 <th className="px-3 py-2 font-display font-semibold">Units</th>
                 <th className="px-3 py-2 font-display font-semibold">Target yield</th>
-                <th className="px-3 py-2 font-display font-semibold">Naïef rev</th>
+                <th className="px-3 py-2 font-display font-semibold">Naïve rev</th>
                 <th className="px-3 py-2 font-display font-semibold">Sim rev</th>
                 <th className="px-3 py-2 font-display font-semibold">Sim yield</th>
                 <th className="px-3 py-2 font-display font-semibold">Delta</th>
@@ -222,7 +224,7 @@ function buildGroupedBar(
   return {
     grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Naïef', 'Sim', 'Full cap'], top: 0, textStyle: { color: COLORS.gray } },
+    legend: { data: ['Naïve', 'Sim', 'Full cap'], top: 0, textStyle: { color: COLORS.gray } },
     xAxis: { type: 'category', data: labels, axisLabel: { color: COLORS.gray } },
     yAxis: {
       type: 'value',
@@ -230,7 +232,7 @@ function buildGroupedBar(
     },
     series: [
       {
-        name: 'Naïef',
+        name: 'Naïve',
         type: 'bar',
         data: cabins.map((c) => Math.round(byCabin.get(c)?.naive ?? 0)),
         itemStyle: { color: COLORS.gray },

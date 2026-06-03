@@ -7,7 +7,11 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDiscoverRoutes, useRunPipeline } from '@/hooks/useSeasonal'
+import {
+  useDiscoverRoutes,
+  useRunPipeline,
+  useSeasonalSessions,
+} from '@/hooks/useSeasonal'
 import type { DiscoverResponse, PipelineSummary } from '@/types/seasonal'
 import { cabinLabel } from '@/config/displacement'
 import { formatCurrency, formatNumber } from '@/utils/format'
@@ -20,7 +24,7 @@ import {
   LoadingState,
 } from '@/components/displacement/StateViews'
 
-const STEPS = ['Seizoen', 'Routes', 'Pipeline']
+const STEPS = ['Season', 'Routes', 'Pipeline']
 
 export function NewSeason() {
   const navigate = useNavigate()
@@ -58,9 +62,13 @@ export function NewSeason() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <header className="space-y-3">
-        <h1 className="font-display font-bold text-xl text-rm-dark">Nieuw seizoen</h1>
+        <h1 className="font-display font-bold text-xl text-rm-dark">New season</h1>
         <ProgressSteps steps={STEPS} current={step} />
       </header>
+
+      {step === 0 && (
+        <LoadExistingSeason onLoad={() => navigate('/season/overview')} />
+      )}
 
       {step === 0 && (
         <StepSeason
@@ -103,6 +111,50 @@ export function NewSeason() {
   )
 }
 
+/* ── Load Existing Season ───────────────────────────────────────────────── */
+
+function LoadExistingSeason({ onLoad }: { onLoad: (session: string) => void }) {
+  const sessions = useSeasonalSessions()
+  const [selected, setSelected] = useState('')
+
+  // Backend (Flask) kan offline zijn — toon dan een subtiele melding i.p.v. fout.
+  let body: ReactNode
+  if (sessions.isPending) {
+    body = <span className="font-body text-xs text-rm-gray">Loading…</span>
+  } else if (sessions.isError || sessions.data.length === 0) {
+    body = (
+      <span className="font-body text-xs text-rm-gray">No existing seasons found.</span>
+    )
+  } else {
+    const effective = sessions.data.some((s) => s.name === selected)
+      ? selected
+      : sessions.data[0].name
+    body = (
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={effective}
+          onChange={(e) => setSelected(e.target.value)}
+          className="max-w-[320px] rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
+        >
+          {sessions.data.map((s) => (
+            <option key={s.name} value={s.name}>
+              {s.name}
+              {s.modified ? ` · ${s.modified}` : ''}
+            </option>
+          ))}
+        </select>
+        <PrimaryButton onClick={() => onLoad(effective)}>Load season</PrimaryButton>
+      </div>
+    )
+  }
+
+  return (
+    <SectionCard title="Load existing season" subtitle="Open a previously computed season">
+      {body}
+    </SectionCard>
+  )
+}
+
 /* ── Stap 0: seizoen-config ─────────────────────────────────────────────── */
 
 function StepSeason({
@@ -125,33 +177,33 @@ function StepSeason({
   onSearch: () => void
 }) {
   return (
-    <SectionCard title="Seizoen" subtitle="Naam en periode waarvoor je routes wilt ontdekken">
+    <SectionCard title="Season" subtitle="Name and period to discover routes for">
       <div className="space-y-4">
-        <Field label="Naam">
+        <Field label="Name">
           <input
             type="text"
             value={name}
             onChange={(e) => onName(e.target.value)}
-            placeholder="bv. Winter 2026/27"
+            placeholder="e.g. Winter 2026/27"
             className="w-full rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
           />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Startdatum">
+          <Field label="Start date">
             <DateInput value={start} onChange={onStart} />
           </Field>
-          <Field label="Einddatum">
+          <Field label="End date">
             <DateInput value={end} onChange={onEnd} />
           </Field>
         </div>
         {start !== '' && end !== '' && start > end && (
           <p className="font-body text-xs text-villain">
-            Einddatum moet na de startdatum liggen.
+            End date must be after the start date.
           </p>
         )}
         <div className="flex justify-end">
           <PrimaryButton onClick={onSearch} disabled={!canSearch}>
-            Zoek routes
+            Find routes
           </PrimaryButton>
         </div>
       </div>
@@ -177,13 +229,13 @@ function StepRoutes({
   return (
     <SectionCard
       title="Routes"
-      subtitle="Selecteer de routes die je in dit seizoen wilt plannen"
+      subtitle="Select the routes you want to plan for this season"
     >
       <RouteList discover={discover} selected={selected} onToggle={onToggle} />
       <div className="mt-4 flex justify-between">
-        <SecondaryButton onClick={onBack}>Terug</SecondaryButton>
+        <SecondaryButton onClick={onBack}>Back</SecondaryButton>
         <PrimaryButton onClick={onNext} disabled={selected.length === 0}>
-          Verder ({selected.length})
+          Next ({selected.length})
         </PrimaryButton>
       </div>
     </SectionCard>
@@ -199,12 +251,14 @@ function RouteList({
   selected: string[]
   onToggle: (route: string) => void
 }) {
-  if (discover.isPending) return <LoadingState label="Routes ontdekken…" />
-  if (discover.isError) return <ErrorState message={discover.error.message} />
+  if (discover.isPending) return <LoadingState label="Discovering routes…" />
+  if (discover.isError) {
+    return <ErrorState title="Could not load seasonal data" message={discover.error.message} />
+  }
 
   const entries = Object.entries(discover.data.routes)
   if (entries.length === 0) {
-    return <EmptyState message="Geen routes gevonden voor deze periode." />
+    return <EmptyState message="No routes found for this period." />
   }
 
   return (
@@ -253,14 +307,14 @@ function RouteCard({
         </span>
       </div>
       <div className="mt-0.5 font-body text-xs text-rm-gray">
-        {info.totalProducts} producten · {info.minDate} – {info.maxDate}
+        {info.totalProducts} products · {info.minDate} – {info.maxDate}
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {info.cabins.map((c) => (
           <span
             key={c.code}
             className="rounded bg-rm-gray-light px-1.5 py-0.5 font-body text-[11px] text-rm-dark"
-            title={`${c.products} producten · gem. capaciteit ${formatNumber(c.avgCapacity)}`}
+            title={`${c.products} products · avg capacity ${formatNumber(c.avgCapacity)}`}
           >
             {cabinLabel(c.code)} · {c.products}p · {formatNumber(c.avgCapacity)} cap
           </span>
@@ -298,26 +352,29 @@ function StepPipeline({
   return (
     <SectionCard
       title="Pipeline"
-      subtitle="Bereken targets voor de geselecteerde routes"
+      subtitle="Calculate targets for the selected routes"
     >
       <dl className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Recap label="Naam" value={name} />
-        <Recap label="Periode" value={`${start} – ${end}`} />
+        <Recap label="Name" value={name} />
+        <Recap label="Period" value={`${start} – ${end}`} />
         <Recap label="Routes" value={selected.join(', ') || '—'} />
       </dl>
 
-      {status === 'pending' && <LoadingState label="Pipeline draait…" />}
+      {status === 'pending' && <LoadingState label="Pipeline running…" />}
       {status === 'error' && (
-        <ErrorState message={error?.message ?? 'Pipeline mislukt.'} />
+        <ErrorState
+          title="Pipeline failed"
+          message={error?.message ?? 'Pipeline failed.'}
+        />
       )}
       {status === 'success' && summary && <PipelineSummaryCard summary={summary} />}
 
       <div className="mt-4 flex justify-between">
         <SecondaryButton onClick={onBack} disabled={status === 'pending'}>
-          Terug
+          Back
         </SecondaryButton>
         {status === 'success' ? (
-          <PrimaryButton onClick={onGoOverview}>Naar Season Overview →</PrimaryButton>
+          <PrimaryButton onClick={onGoOverview}>To Season Overview →</PrimaryButton>
         ) : (
           <PrimaryButton onClick={onRun} disabled={status === 'pending' || selected.length === 0}>
             Run Pipeline
@@ -333,7 +390,7 @@ function PipelineSummaryCard({ summary }: { summary: PipelineSummary }) {
   return (
     <div className="space-y-3">
       <div className="rounded-md border border-status-ok/30 bg-status-ok/5 px-3 py-2 font-body text-sm text-rm-dark">
-        Pipeline voltooid — stap: <span className="font-medium">{summary.step}</span>
+        Pipeline complete — step: <span className="font-medium">{summary.step}</span>
       </div>
       {t && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -344,12 +401,12 @@ function PipelineSummaryCard({ summary }: { summary: PipelineSummary }) {
             value={formatCurrency(t.totalRevenue)}
             accent="blue"
           />
-          <KpiCard label="Gem. LF" value={`${Math.round(t.avgLf * 100)}%`} />
+          <KpiCard label="Avg LF" value={`${Math.round(t.avgLf * 100)}%`} />
         </div>
       )}
       {summary.products && (
         <p className="font-body text-xs text-rm-gray">
-          {summary.products.count} producten · {summary.products.routes.join(', ')} ·{' '}
+          {summary.products.count} products · {summary.products.routes.join(', ')} ·{' '}
           {summary.products.dates}
         </p>
       )}

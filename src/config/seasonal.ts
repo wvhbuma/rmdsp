@@ -18,14 +18,14 @@ export const MASK_PHASE_COLORS: Record<string, string> = {
   closed: '#dfe3e8',
 }
 
-/** Leesbare labels per target-binding (waarom een target zo uitkomt). */
+/** Readable labels per target-binding (why a target ends up where it does). */
 export const BINDING_LABELS: Record<string, string> = {
-  elasticity: 'Elasticiteit',
+  elasticity: 'Elasticity',
   yield_floor: 'Yield Floor',
   high_lf_bonus: 'High-LF Bonus',
   oversell_py: 'Oversell (PY)',
-  no_growth: 'Geen groei',
-  no_py_data: 'Geen PY data',
+  no_growth: 'No growth',
+  no_py_data: 'No PY data',
 }
 
 /** Kleur per vraag-profiel (High/Med/Low). */

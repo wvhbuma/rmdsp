@@ -15,8 +15,8 @@ const GAP_CLASS: Record<GapFillMethod, string> = {
 const GAP_LABEL: Record<GapFillMethod, string> = {
   matched: 'Matched',
   cmf_slp_proxy: 'CMF/SLP proxy',
-  cabin_avg: 'Cabin gem.',
-  missing: 'Ontbreekt',
+  cabin_avg: 'Cabin avg',
+  missing: 'Missing',
 }
 
 export function GapFillBadge({ method }: { method: GapFillMethod }) {

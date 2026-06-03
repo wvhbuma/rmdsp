@@ -27,10 +27,12 @@ import { GapFillBadge } from '@/components/seasonal/GapFillBadge'
 export function BudgetTargets() {
   const query = useSeasonalResults()
 
-  if (query.isPending) return <LoadingState label="Targets laden…" />
-  if (query.isError) return <ErrorState message={query.error.message} />
+  if (query.isPending) return <LoadingState label="Loading targets…" />
+  if (query.isError) {
+    return <ErrorState title="Could not load seasonal data" message={query.error.message} />
+  }
   if (query.data.targets.length === 0) {
-    return <NoSeasonData message="Nog geen targets." />
+    return <NoSeasonData message="No targets yet." />
   }
 
   return <TargetsView targets={query.data.targets} />
@@ -45,7 +47,7 @@ function monthKey(date: string): string {
 function monthLabel(key: string): string {
   const d = new Date(`${key}-01T00:00:00`)
   if (Number.isNaN(d.getTime())) return key
-  return new Intl.DateTimeFormat('nl-NL', { month: 'short', year: 'numeric' }).format(d)
+  return new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' }).format(d)
 }
 
 function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
@@ -83,7 +85,7 @@ function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
         <div>
           <h1 className="font-display font-bold text-xl text-rm-dark">Budget &amp; Targets</h1>
           <p className="font-body text-sm text-rm-gray">
-            Seizoens-targets met vergelijking t.o.v. vorig jaar (PY).
+            Season targets compared to prior year (PY).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -96,7 +98,7 @@ function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
             render={(c) => CABIN_LABELS[c] ?? c}
           />
           <FilterSelect
-            label="Maand"
+            label="Month"
             value={month}
             onChange={setMonth}
             options={months}
@@ -105,13 +107,13 @@ function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
         </div>
       </header>
 
-      <SectionCard title="Per route" subtitle="Samenvatting van de huidige selectie">
+      <SectionCard title="Per route" subtitle="Summary of the current selection">
         <RouteSummaryTable targets={filtered} />
       </SectionCard>
 
       <SectionCard
-        title="Target-detail"
-        subtitle={`${filtered.length} producten · PY links, target rechts`}
+        title="Target detail"
+        subtitle={`${filtered.length} products · PY left, target right`}
       >
         {filtered.length === 0 ? (
           <EmptyState />
@@ -148,7 +150,7 @@ function FilterSelect({
         onChange={(e) => onChange(e.target.value)}
         className="bg-transparent font-body text-[13px] text-rm-dark focus:outline-none"
       >
-        <option value={ALL}>Alle</option>
+        <option value={ALL}>All</option>
         {options.map((o) => (
           <option key={o} value={o}>
             {render ? render(o) : o}
@@ -245,7 +247,7 @@ function TargetDetailTable({ targets }: { targets: SeasonalTarget[] }) {
       <table className="w-full border-collapse whitespace-nowrap text-right font-body text-[13px]">
         <thead>
           <tr className="bg-rm-gray-light text-rm-dark">
-            <th className="px-3 py-2 text-left font-display font-semibold">Vertrek</th>
+            <th className="px-3 py-2 text-left font-display font-semibold">Departure</th>
             <th className="px-3 py-2 text-left font-display font-semibold">Route</th>
             <th className="px-3 py-2 text-left font-display font-semibold">Cabin</th>
             <th className="bg-rm-bg px-3 py-2 font-display font-semibold">PY units</th>

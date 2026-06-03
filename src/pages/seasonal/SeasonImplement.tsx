@@ -21,10 +21,12 @@ import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 export function SeasonImplement() {
   const query = useSeasonalResults()
 
-  if (query.isPending) return <LoadingState label="Resultaten laden…" />
-  if (query.isError) return <ErrorState message={query.error.message} />
+  if (query.isPending) return <LoadingState label="Loading results…" />
+  if (query.isError) {
+    return <ErrorState title="Could not load seasonal data" message={query.error.message} />
+  }
   if (query.data.targets.length === 0 && query.data.masks.length === 0) {
-    return <NoSeasonData message="Nog geen resultaten om te implementeren." />
+    return <NoSeasonData message="No results to implement yet." />
   }
 
   return <ImplementView results={query.data} />
@@ -41,7 +43,6 @@ function ImplementView({ results }: { results: SeasonalResults }) {
   const [cabins, setCabins] = useState<string[]>([])
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
-  const [apiKey, setApiKey] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
 
   const implement = useImplement()
@@ -80,7 +81,6 @@ function ImplementView({ results }: { results: SeasonalResults }) {
   )
 
   const mutationArgs = {
-    apiKey,
     routes: routes.length > 0 ? routes : undefined,
     cabins: cabins.length > 0 ? cabins : undefined,
   }
@@ -109,28 +109,28 @@ function ImplementView({ results }: { results: SeasonalResults }) {
     URL.revokeObjectURL(url)
   }
 
-  const canSubmit = apiKey.trim() !== '' && productCount > 0
+  const canSubmit = productCount > 0
 
   return (
     <div className="space-y-6 p-6">
       <header>
-        <h1 className="font-display font-bold text-xl text-rm-dark">Implementatie</h1>
+        <h1 className="font-display font-bold text-xl text-rm-dark">Implementation</h1>
         <p className="font-body text-sm text-rm-gray">
-          Valideer en push de berekende fares naar de RAM API.
+          Validate and push the calculated fares to the RAM API.
         </p>
       </header>
 
-      {/* Waarschuwing */}
+      {/* Warning */}
       <div className="flex items-start gap-3 rounded-lg border border-status-warn/40 bg-status-warn/10 px-4 py-3">
         <Icon name="alert-triangle" className="mt-0.5 h-5 w-5 shrink-0 text-status-warn" />
         <p className="font-body text-sm text-rm-dark">
-          <span className="font-semibold">Let op:</span> een live push schrijft direct
-          naar de RAM productie-API. Draai eerst een dry-run.
+          <span className="font-semibold">Warning:</span> a live push writes directly to
+          the RAM production API. The API key is handled server-side; run a dry-run first.
         </p>
       </div>
 
       {/* Filters */}
-      <SectionCard title="Selectie">
+      <SectionCard title="Selection">
         <div className="space-y-4">
           <ChipRow
             label="Route"
@@ -146,34 +146,26 @@ function ImplementView({ results }: { results: SeasonalResults }) {
             onToggle={(v) => setCabins((p) => toggle(p, v))}
           />
           <div className="flex flex-wrap items-end gap-4">
-            <DateField label="Van" value={start} onChange={setStart} />
-            <DateField label="Tot" value={end} onChange={setEnd} />
+            <DateField label="From" value={start} onChange={setStart} />
+            <DateField label="To" value={end} onChange={setEnd} />
           </div>
         </div>
       </SectionCard>
 
-      {/* Telling */}
+      {/* Counts */}
       <div className="grid grid-cols-3 gap-3">
-        <KpiCard label="Vertrekken" value={formatNumber(departures)} />
+        <KpiCard label="Departures" value={formatNumber(departures)} />
         <KpiCard label="Fare items" value={formatNumber(filteredMasks.length)} accent="blue" />
         <KpiCard label="Target items" value={formatNumber(filteredTargets.length)} />
       </div>
 
-      {/* API key + acties */}
-      <SectionCard title="Acties">
+      {/* Actions */}
+      <SectionCard title="Actions">
         <div className="space-y-4">
-          <label className="block max-w-sm">
-            <span className="mb-1 block font-display text-[11px] uppercase tracking-wide text-rm-gray">
-              API key
-            </span>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="RAM API key"
-              className="w-full rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
-            />
-          </label>
+          <p className="font-body text-xs text-rm-gray">
+            The RAM API key is read server-side (RAM_API_KEY) — no key is sent from the
+            browser.
+          </p>
 
           <div className="flex flex-wrap gap-2">
             <button
@@ -241,7 +233,7 @@ function ChipRow({
   return (
     <div>
       <div className="mb-1.5 font-display text-[11px] uppercase tracking-wide text-rm-gray">
-        {label} <span className="normal-case">(leeg = alle)</span>
+        {label} <span className="normal-case">(empty = all)</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
@@ -299,7 +291,7 @@ function ResultArea({
   error: Error | null
   result: ImplementResult | undefined
 }) {
-  if (pending) return <LoadingState label="Bezig…" />
+  if (pending) return <LoadingState label="Working…" />
   if (error) {
     return (
       <div className="rounded-md border border-status-error/30 bg-status-error/5 px-3 py-2 font-body text-sm text-status-error">
@@ -320,7 +312,7 @@ function ResultArea({
         }`}
       >
         <span className="font-medium">{result.dryRun ? 'Dry run' : 'Live push'}:</span>{' '}
-        {result.pushed} gepusht · {result.skipped} overgeslagen
+        {result.pushed} pushed · {result.skipped} skipped
       </div>
       {result.log.length > 0 && <PushLog log={result.log} />}
     </div>
@@ -358,12 +350,13 @@ function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-rm-dark/40 p-4">
       <div className="w-full max-w-md rounded-lg border border-rm-border bg-rm-surface p-5 shadow-xl">
         <h3 className="font-display font-semibold text-base text-rm-dark">
-          Live push bevestigen
+          Confirm live push
         </h3>
         <p className="mt-2 font-body text-sm text-rm-gray">
-          Weet je zeker dat je <span className="font-semibold text-rm-dark">{count}</span>{' '}
-          producten naar de <span className="font-semibold text-rm-dark">PRD</span>-omgeving
-          wilt pushen? Dit is niet ongedaan te maken.
+          Are you sure you want to push{' '}
+          <span className="font-semibold text-rm-dark">{count}</span> products to the{' '}
+          <span className="font-semibold text-rm-dark">PRD</span> environment? This cannot
+          be undone.
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -371,14 +364,14 @@ function ConfirmDialog({
             onClick={onCancel}
             className="rounded-md border border-rm-border px-4 py-2 font-display text-sm font-medium text-rm-gray hover:bg-rm-gray-light"
           >
-            Annuleren
+            Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="rounded-md bg-villain px-4 py-2 font-display text-sm font-semibold text-white hover:opacity-90"
           >
-            Ja, push naar PRD
+            Yes, push to PRD
           </button>
         </div>
       </div>

@@ -28,10 +28,12 @@ const ALL = 'all'
 export function SeasonMasks() {
   const query = useSeasonalResults()
 
-  if (query.isPending) return <LoadingState label="Maskers laden…" />
-  if (query.isError) return <ErrorState message={query.error.message} />
+  if (query.isPending) return <LoadingState label="Loading masks…" />
+  if (query.isError) {
+    return <ErrorState title="Could not load seasonal data" message={query.error.message} />
+  }
   if (query.data.masks.length === 0) {
-    return <NoSeasonData message="Nog geen maskers." />
+    return <NoSeasonData message="No masks yet." />
   }
 
   return <MasksView masks={query.data.masks} />
@@ -92,21 +94,21 @@ function MasksView({ masks }: { masks: SeasonalMask[] }) {
     <div className="space-y-6 p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display font-bold text-xl text-rm-dark">Maskers</h1>
+          <h1 className="font-display font-bold text-xl text-rm-dark">Masks</h1>
           <p className="font-body text-sm text-rm-gray">
-            AU-distributie per vertrek over de booking classes.
+            AU distribution per departure across booking classes.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Select label="Route" value={route} onChange={setRoute}>
-            <option value={ALL}>Alle</option>
+            <option value={ALL}>All</option>
             {markets.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>
             ))}
           </Select>
-          <Select label="Vertrek" value={effectiveKey} onChange={setSelectedKey}>
+          <Select label="Departure" value={effectiveKey} onChange={setSelectedKey}>
             {filteredKeys.map((k) => (
               <option key={k.key} value={k.key}>
                 {k.market} · {CABIN_LABELS[k.cabin] ?? k.cabin} · {k.date}
@@ -117,14 +119,14 @@ function MasksView({ masks }: { masks: SeasonalMask[] }) {
       </header>
 
       {rows.length === 0 ? (
-        <EmptyState message="Geen masker voor deze selectie." />
+        <EmptyState message="No mask for this selection." />
       ) : (
         <>
-          <SectionCard title="AU-distributie" subtitle="Cumulatieve authorization units per RBD">
+          <SectionCard title="AU distribution" subtitle="Cumulative authorization units per RBD">
             <EChart option={chartOption} className="h-96" />
           </SectionCard>
 
-          <SectionCard title="Mask-detail">
+          <SectionCard title="Mask detail">
             <MaskTable rows={rows} />
           </SectionCard>
         </>

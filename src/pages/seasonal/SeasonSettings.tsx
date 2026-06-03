@@ -18,10 +18,11 @@ import { SectionCard } from '@/components/displacement/SectionCard'
 const ELASTICITY_MONTHS = ['Nov', 'Dec', 'Jan']
 
 function makeElasticities(): DestinationConfig['elasticities'] {
+  // Prijselasticiteiten zijn negatief (vraag daalt bij prijsstijging).
   return {
-    Nov: { SEA: 1.4, CHT: 1.1, CMF: 0.9, SLP: 0.7 },
-    Dec: { SEA: 1.6, CHT: 1.3, CMF: 1.0, SLP: 0.8 },
-    Jan: { SEA: 1.2, CHT: 1.0, CMF: 0.8, SLP: 0.6 },
+    Nov: { SEA: -1.4, CHT: -1.1, CMF: -0.9, SLP: -0.7 },
+    Dec: { SEA: -1.6, CHT: -1.3, CMF: -1.0, SLP: -0.8 },
+    Jan: { SEA: -1.2, CHT: -1.0, CMF: -0.8, SLP: -0.6 },
   }
 }
 
@@ -58,11 +59,13 @@ interface Meaning {
 }
 
 function elasticityMeaning(e: number): Meaning {
-  if (e < 0.5) return { label: 'Zeer inelastisch', cls: 'text-lf-green' }
-  if (e < 0.8) return { label: 'Inelastisch', cls: 'text-lf-green' }
-  if (e < 1.2) return { label: 'Gemiddeld', cls: 'text-rm-gray' }
-  if (e < 1.8) return { label: 'Elastisch', cls: 'text-lf-orange' }
-  return { label: 'Zeer elastisch', cls: 'text-villain' }
+  // Betekenis op de magnitude (elasticiteit is negatief).
+  const a = Math.abs(e)
+  if (a < 0.5) return { label: 'Very inelastic', cls: 'text-lf-green' }
+  if (a < 0.8) return { label: 'Inelastic', cls: 'text-lf-green' }
+  if (a < 1.2) return { label: 'Average', cls: 'text-rm-gray' }
+  if (a < 1.8) return { label: 'Elastic', cls: 'text-lf-orange' }
+  return { label: 'Very elastic', cls: 'text-villain' }
 }
 
 const CONSTRAINT_FIELDS: {
@@ -104,16 +107,46 @@ export function SeasonSettings() {
     URL.revokeObjectURL(url)
   }
 
+  function loadConfig(file: File) {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result)) as SeasonalConfig
+        if (parsed && typeof parsed === 'object' && parsed.destinations) {
+          setConfig(parsed)
+          const keys = Object.keys(parsed.destinations)
+          if (keys.length > 0 && !keys.includes(activeDest)) setActiveDest(keys[0])
+        }
+      } catch {
+        // Negeer ongeldige JSON — de huidige config blijft staan.
+      }
+    }
+    reader.readAsText(file)
+  }
+
   return (
     <div className="space-y-6 p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display font-bold text-xl text-rm-dark">Settings</h1>
           <p className="font-body text-sm text-rm-gray">
-            Configuratie per bestemming. Wijzigingen blijven lokaal tot je exporteert.
+            Configuration per destination. Changes stay local until you export.
           </p>
         </div>
         <div className="flex gap-2">
+          <label className="cursor-pointer rounded-md border border-rm-border px-4 py-2 font-display text-sm font-medium text-rm-gray hover:bg-rm-gray-light">
+            Load config
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) loadConfig(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
           <button
             type="button"
             onClick={exportConfig}
@@ -150,10 +183,10 @@ export function SeasonSettings() {
           </SectionCard>
 
           <SectionCard
-            title="Elasticiteiten"
-            subtitle="Prijselasticiteit (ε) per cabin"
+            title="Elasticities"
+            subtitle="Price elasticity (ε) per cabin"
             actions={
-              <SelectFilter label="Maand" value={month} onChange={setMonth}>
+              <SelectFilter label="Month" value={month} onChange={setMonth}>
                 {ELASTICITY_MONTHS.map((m) => (
                   <option key={m} value={m}>
                     {m}
@@ -167,7 +200,7 @@ export function SeasonSettings() {
                 <tr className="bg-rm-gray-light text-rm-dark">
                   <th className="px-3 py-2 font-display font-semibold">Cabin</th>
                   <th className="px-3 py-2 font-display font-semibold">ε</th>
-                  <th className="px-3 py-2 font-display font-semibold">Betekenis</th>
+                  <th className="px-3 py-2 font-display font-semibold">Meaning</th>
                 </tr>
               </thead>
               <tbody>
@@ -181,7 +214,6 @@ export function SeasonSettings() {
                         <NumberInput
                           value={value}
                           step={0.1}
-                          min={0}
                           onChange={(v) =>
                             updateActive((d) => ({
                               ...d,
@@ -230,7 +262,7 @@ export function SeasonSettings() {
                 <tr className="bg-rm-gray-light text-rm-dark">
                   <th className="px-3 py-2 font-display font-semibold">Cabin</th>
                   <th className="px-3 py-2 font-display font-semibold">Factor</th>
-                  <th className="px-3 py-2 font-display font-semibold">Korting</th>
+                  <th className="px-3 py-2 font-display font-semibold">Discount</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,7 +286,7 @@ export function SeasonSettings() {
                           }
                         />
                       </td>
-                      <td className="px-3 py-1.5 text-rm-gray">{discountPct}% korting</td>
+                      <td className="px-3 py-1.5 text-rm-gray">{discountPct}% discount</td>
                     </tr>
                   )
                 })}

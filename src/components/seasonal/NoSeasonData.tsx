@@ -5,7 +5,7 @@
 import { Link } from 'react-router-dom'
 
 export function NoSeasonData({
-  message = 'Nog geen seizoensresultaten.',
+  message = 'No season data available.',
 }: {
   message?: string
 }) {
@@ -16,7 +16,7 @@ export function NoSeasonData({
         to="/season/new"
         className="mt-1 inline-block font-display font-medium text-es-blue hover:underline"
       >
-        Maak eerst een seizoen aan →
+        Create a season first →
       </Link>
     </div>
   )
