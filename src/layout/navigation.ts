@@ -124,6 +124,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Audit Trail', path: '/audit', icon: 'file-text' },
       { label: 'Decision Log', path: '/decision-log', icon: 'check-square' },
       { label: 'Approval Rules', path: '/approval-rules', icon: 'check' },
+      { label: 'User Preferences', path: '/settings/preferences', icon: 'sliders' },
     ],
   },
 ]
@@ -152,4 +153,41 @@ export function findPathLocation(pathname: string): PathLocation {
     }
   }
   return {}
+}
+
+/** Alle leaf-paden binnen een group (children + alle subgroup-items). */
+export function groupLeafPaths(group: NavGroup): string[] {
+  return [
+    ...(group.children?.map((c) => c.path) ?? []),
+    ...(group.subgroups?.flatMap((s) => s.items.map((i) => i.path)) ?? []),
+  ]
+}
+
+/*
+ * Filter de nav-structuur op zichtbaarheid (Feature Visibility uit User
+ * Preferences). Lege subgroups en lege groups vallen weg, zodat de Sidebar geen
+ * lege koppen toont. Pure functie — geen state.
+ */
+export function filterNavGroups(
+  groups: NavGroup[],
+  isVisible: (path: string) => boolean,
+): NavGroup[] {
+  const result: NavGroup[] = []
+  for (const group of groups) {
+    const children = group.children?.filter((c) => isVisible(c.path))
+    const subgroups = group.subgroups
+      ?.map((s) => ({ ...s, items: s.items.filter((i) => isVisible(i.path)) }))
+      .filter((s) => s.items.length > 0)
+
+    const hasChildren = (children?.length ?? 0) > 0
+    const hasSubgroups = (subgroups?.length ?? 0) > 0
+    if (!hasChildren && !hasSubgroups) continue
+
+    result.push({
+      ...group,
+      children: hasChildren ? children : undefined,
+      subgroups: hasSubgroups ? subgroups : undefined,
+    })
+  }
+  return result
 }

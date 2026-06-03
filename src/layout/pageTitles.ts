@@ -27,6 +27,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/audit': 'Audit Trail',
   '/decision-log': 'Decision Log',
   '/approval-rules': 'Approval Rules',
+  '/settings/preferences': 'User Preferences',
 }
 
 export function getPageTitle(pathname: string): string {

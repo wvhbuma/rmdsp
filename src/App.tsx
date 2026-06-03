@@ -25,6 +25,7 @@ import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
 import { DisplacementReporting } from '@/pages/displacement/DisplacementReporting'
 import { DisplacementMonthly } from '@/pages/displacement/DisplacementMonthly'
 import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartures'
+import { UserPreferences } from '@/pages/settings/UserPreferences'
 
 export function App() {
   return (
@@ -65,6 +66,7 @@ export function App() {
             <Route path="audit" element={<AuditTrail />} />
             <Route path="decision-log" element={<DecisionLog />} />
             <Route path="approval-rules" element={<ApprovalRules />} />
+            <Route path="settings/preferences" element={<UserPreferences />} />
 
             {/* 404 fallback */}
             <Route path="*" element={<NotFound />} />
