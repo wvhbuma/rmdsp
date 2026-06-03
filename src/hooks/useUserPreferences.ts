@@ -15,6 +15,7 @@ import {
   DEFAULT_CHART_PREFS,
   DEFAULT_ROUTE_ASSIGNMENT,
   STORAGE_KEYS,
+  isValidRouteAssignment,
   type ChartPrefs,
   type ChartType,
   type FeatureVisibility,
@@ -33,6 +34,7 @@ const chartPrefsStore = createPersistentStore<ChartPrefs>(
 const routesStore = createPersistentStore<RouteAssignment>(
   STORAGE_KEYS.routes,
   DEFAULT_ROUTE_ASSIGNMENT,
+  isValidRouteAssignment, // oude shape ({markets,directions}) → val terug op default
 )
 
 function toggleInArray(arr: string[], value: string, enabled: boolean): string[] {
@@ -53,12 +55,10 @@ export interface UseUserPreferences {
   chartPrefs: ChartPrefs
   setChartPalette: (chart: ChartType, palette: PaletteId) => void
 
-  // Route Assignment
+  // Route Assignment (op route-niveau)
   routes: RouteAssignment
-  isMarketEnabled: (market: string) => boolean
-  isDirectionEnabled: (code: string) => boolean
-  setMarketEnabled: (market: string, enabled: boolean) => void
-  setDirectionEnabled: (code: string, enabled: boolean) => void
+  isRouteEnabled: (route: string) => boolean
+  setRouteEnabled: (route: string, enabled: boolean) => void
 }
 
 export function useUserPreferences(): UseUserPreferences {
@@ -90,26 +90,15 @@ export function useUserPreferences(): UseUserPreferences {
     chartPrefsStore.set((prev) => ({ ...prev, [chart]: palette }))
   }, [])
 
-  const isMarketEnabled = useCallback(
-    (market: string) => routes.markets.includes(market),
-    [routes],
-  )
-  const isDirectionEnabled = useCallback(
-    (code: string) => routes.directions.includes(code),
+  const isRouteEnabled = useCallback(
+    (route: string) => routes.routes.includes(route),
     [routes],
   )
 
-  const setMarketEnabled = useCallback((market: string, enabled: boolean) => {
+  const setRouteEnabled = useCallback((route: string, enabled: boolean) => {
     routesStore.set((prev) => ({
       ...prev,
-      markets: toggleInArray(prev.markets, market, enabled),
-    }))
-  }, [])
-
-  const setDirectionEnabled = useCallback((code: string, enabled: boolean) => {
-    routesStore.set((prev) => ({
-      ...prev,
-      directions: toggleInArray(prev.directions, code, enabled),
+      routes: toggleInArray(prev.routes, route, enabled),
     }))
   }, [])
 
@@ -121,9 +110,7 @@ export function useUserPreferences(): UseUserPreferences {
     chartPrefs,
     setChartPalette,
     routes,
-    isMarketEnabled,
-    isDirectionEnabled,
-    setMarketEnabled,
-    setDirectionEnabled,
+    isRouteEnabled,
+    setRouteEnabled,
   }
 }

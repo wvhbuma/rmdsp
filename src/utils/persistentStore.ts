@@ -19,14 +19,20 @@ export interface PersistentStore<T> {
   subscribe: (listener: () => void) => () => void
 }
 
-function readInitial<T>(key: string, fallback: T): T {
+function readInitial<T>(
+  key: string,
+  fallback: T,
+  validate?: (value: unknown) => boolean,
+): T {
   if (typeof window === 'undefined') return fallback
   try {
     const raw = window.localStorage.getItem(key)
     if (raw === null) return fallback
-    return JSON.parse(raw) as T
+    const parsed = JSON.parse(raw) as unknown
+    // Schema-wijziging of corrupte waarde → val terug op default i.p.v. crashen.
+    if (validate && !validate(parsed)) return fallback
+    return parsed as T
   } catch {
-    // Corrupte/onleesbare waarde → val terug op default i.p.v. crashen.
     return fallback
   }
 }
@@ -34,8 +40,9 @@ function readInitial<T>(key: string, fallback: T): T {
 export function createPersistentStore<T>(
   key: string,
   fallback: T,
+  validate?: (value: unknown) => boolean,
 ): PersistentStore<T> {
-  let current = readInitial(key, fallback)
+  let current = readInitial(key, fallback, validate)
   const listeners = new Set<() => void>()
 
   function emit() {
@@ -45,7 +52,7 @@ export function createPersistentStore<T>(
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (e) => {
       if (e.key !== key) return
-      current = readInitial(key, fallback)
+      current = readInitial(key, fallback, validate)
       emit()
     })
   }

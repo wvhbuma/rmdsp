@@ -3,7 +3,7 @@
  * Chart Preferences, Route Assignment). De waarden worden in localStorage
  * bewaard onder de keys hieronder; de hook useUserPreferences leest/schrijft ze.
  */
-import { CATALOG_DIRECTIONS, CATALOG_MARKETS } from '@/config/routes'
+import { CATALOG_ROUTES } from '@/config/routes'
 
 export const STORAGE_KEYS = {
   features: 'ram_user_features',
@@ -85,15 +85,25 @@ export const DEFAULT_CHART_PREFS: ChartPrefs = {
 
 /* ── Route Assignment ───────────────────────────────────────────────────── */
 
+/*
+ * Toewijzing op route-niveau (Prague/Paris/Milan). Toegang tot een route geeft
+ * automatisch toegang tot alle richtingen én verborgen MarketIDs eronder
+ * (bidirectioneel) — vandaar dat we alleen route-namen bewaren.
+ */
 export interface RouteAssignment {
-  /** Toegewezen markt-namen. */
-  markets: string[]
-  /** Toegewezen directionele codes. */
-  directions: string[]
+  routes: string[]
 }
 
 /** Default: alle routes uit de catalogus toegewezen. */
 export const DEFAULT_ROUTE_ASSIGNMENT: RouteAssignment = {
-  markets: [...CATALOG_MARKETS],
-  directions: [...CATALOG_DIRECTIONS],
+  routes: [...CATALOG_ROUTES],
+}
+
+/** Runtime-validatie van een uit localStorage geladen RouteAssignment. */
+export function isValidRouteAssignment(value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as RouteAssignment).routes)
+  )
 }
