@@ -18,7 +18,7 @@ import { CompetitorIntel } from '@/pages/_placeholders/CompetitorIntel'
 import { DistributionChannels } from '@/pages/_placeholders/DistributionChannels'
 import { Overbooking } from '@/pages/_placeholders/Overbooking'
 import { Ancillary } from '@/pages/_placeholders/Ancillary'
-import { BudgetTargets } from '@/pages/_placeholders/BudgetTargets'
+import { BudgetTargets } from '@/pages/BudgetTargets'
 import { AuditTrail } from '@/pages/_placeholders/AuditTrail'
 import { DecisionLog } from '@/pages/_placeholders/DecisionLog'
 import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
@@ -28,7 +28,6 @@ import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartu
 import { UserPreferences } from '@/pages/settings/UserPreferences'
 import { NewSeason } from '@/pages/seasonal/NewSeason'
 import { SeasonOverview } from '@/pages/seasonal/SeasonOverview'
-import { SeasonTargets } from '@/pages/seasonal/SeasonTargets'
 import { SeasonMasks } from '@/pages/seasonal/SeasonMasks'
 import { SeasonSimulation } from '@/pages/seasonal/SeasonSimulation'
 import { SeasonImplement } from '@/pages/seasonal/SeasonImplement'
@@ -69,10 +68,9 @@ export function App() {
             <Route path="ancillary" element={<Ancillary />} />
             <Route path="budget-targets" element={<BudgetTargets />} />
 
-            {/* Season Planning */}
+            {/* Season Planning — Targets staat onder Business Management → Budget & Targets */}
             <Route path="season/new" element={<NewSeason />} />
             <Route path="season/overview" element={<SeasonOverview />} />
-            <Route path="season/targets" element={<SeasonTargets />} />
             <Route path="season/masks" element={<SeasonMasks />} />
             <Route path="season/simulation" element={<SeasonSimulation />} />
             <Route path="season/implement" element={<SeasonImplement />} />

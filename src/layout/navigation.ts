@@ -123,7 +123,6 @@ export const NAV_GROUPS: NavGroup[] = [
         items: [
           { label: 'New Season', path: '/season/new', icon: 'target' },
           { label: 'Season Overview', path: '/season/overview', icon: 'bar-chart' },
-          { label: 'Targets', path: '/season/targets', icon: 'trending-up' },
           { label: 'Maskers', path: '/season/masks', icon: 'layers' },
           { label: 'Simulatie', path: '/season/simulation', icon: 'activity' },
           { label: 'Implementatie', path: '/season/implement', icon: 'check-square' },
