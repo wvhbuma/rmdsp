@@ -115,6 +115,22 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Ancillary Management', path: '/ancillary', icon: 'package' },
       { label: 'Budget & Targets', path: '/budget-targets', icon: 'target' },
     ],
+    subgroups: [
+      {
+        key: 'bm-season',
+        label: 'Season Planning',
+        icon: 'calendar',
+        items: [
+          { label: 'New Season', path: '/season/new', icon: 'target' },
+          { label: 'Season Overview', path: '/season/overview', icon: 'bar-chart' },
+          { label: 'Targets', path: '/season/targets', icon: 'trending-up' },
+          { label: 'Maskers', path: '/season/masks', icon: 'layers' },
+          { label: 'Simulatie', path: '/season/simulation', icon: 'activity' },
+          { label: 'Implementatie', path: '/season/implement', icon: 'check-square' },
+          { label: 'Settings', path: '/season/settings', icon: 'sliders' },
+        ],
+      },
+    ],
   },
   {
     key: 'settings',

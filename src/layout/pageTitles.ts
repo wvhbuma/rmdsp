@@ -28,6 +28,13 @@ export const PAGE_TITLES: Record<string, string> = {
   '/decision-log': 'Decision Log',
   '/approval-rules': 'Approval Rules',
   '/settings/preferences': 'User Preferences',
+  '/season/new': 'Season Planning — New Season',
+  '/season/overview': 'Season Planning — Overview',
+  '/season/targets': 'Season Planning — Targets',
+  '/season/masks': 'Season Planning — Maskers',
+  '/season/simulation': 'Season Planning — Simulatie',
+  '/season/implement': 'Season Planning — Implementatie',
+  '/season/settings': 'Season Planning — Settings',
 }
 
 export function getPageTitle(pathname: string): string {
