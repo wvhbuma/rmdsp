@@ -35,6 +35,8 @@ import {
   formatLf,
   formatNumber,
 } from '@/utils/format'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
+import { paletteColors, pickColor } from '@/config/userPreferences'
 import { FilterBar } from '@/components/displacement/FilterBar'
 import { EChart } from '@/components/displacement/EChart'
 import { SectionCard } from '@/components/displacement/SectionCard'
@@ -88,9 +90,12 @@ function DeparturesView({ data }: { data: DisplacementResponse }) {
     [data, filter, months],
   )
 
+  // Pax-flow gebruikt het 'bar'-palet uit User Preferences.
+  const { chartPrefs } = useUserPreferences()
+  const barPalette = paletteColors(chartPrefs.bar)
   const paxFlowOption = useMemo(
-    () => buildPaxFlowOption(cabinLegs, selectedDate),
-    [cabinLegs, selectedDate],
+    () => buildPaxFlowOption(cabinLegs, selectedDate, barPalette),
+    [cabinLegs, selectedDate, barPalette],
   )
 
   return (
@@ -181,6 +186,7 @@ function CabinTabs({
 function buildPaxFlowOption(
   legRows: DisplacementLeg[],
   selectedDate: string | null,
+  palette: string[],
 ): EChartsCoreOption {
   const rows = selectedDate
     ? legRows.filter((r) => r.date === selectedDate)
@@ -234,21 +240,21 @@ function buildPaxFlowOption(
         type: 'bar',
         stack: 'flow',
         data: aggs.map((a) => a.board),
-        itemStyle: { color: COLORS.esBlue },
+        itemStyle: { color: pickColor(palette, 0) },
       },
       {
         name: 'Doorgaand',
         type: 'bar',
         stack: 'flow',
         data: aggs.map((a) => a.through),
-        itemStyle: { color: COLORS.gray },
+        itemStyle: { color: pickColor(palette, 1) },
       },
       {
         name: 'Uitstappers',
         type: 'bar',
         stack: 'flow',
         data: aggs.map((a) => -a.alight),
-        itemStyle: { color: COLORS.esMagenta },
+        itemStyle: { color: pickColor(palette, 2) },
       },
     ],
   }

@@ -18,6 +18,8 @@ import {
   type DisplacementFilter,
 } from '@/utils/displacement'
 import { cabinLabel, COLORS } from '@/config/displacement'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
+import { paletteColors, pickColor } from '@/config/userPreferences'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { FilterBar } from '@/components/displacement/FilterBar'
 import { MonthTable } from '@/components/displacement/MonthTable'
@@ -52,7 +54,13 @@ function MonthlyView({ data }: { data: DisplacementResponse }) {
   )
   const od = useMemo(() => filterOd(data, filter, months), [data, filter, months])
 
-  const scatterOption = useMemo(() => buildScatterOption(od), [od])
+  // Scatter-palet uit User Preferences (villain = kleur 0, victim = kleur 1).
+  const { chartPrefs } = useUserPreferences()
+  const scatterColors = paletteColors(chartPrefs.scatter)
+  const scatterOption = useMemo(
+    () => buildScatterOption(od, scatterColors),
+    [od, scatterColors],
+  )
 
   // O&D-cards: hoogste volume eerst.
   const odSorted = useMemo(
@@ -122,7 +130,12 @@ interface ScatterPoint {
   label?: { show: boolean }
 }
 
-function buildScatterOption(od: DisplacementOD[]): EChartsCoreOption {
+function buildScatterOption(
+  od: DisplacementOD[],
+  palette: string[],
+): EChartsCoreOption {
+  const villainColor = pickColor(palette, 0)
+  const victimColor = pickColor(palette, 1)
   // Top-12 op volume krijgt een label.
   const topUnits = new Set(
     [...od].sort((a, b) => b.units - a.units).slice(0, 12).map((o) => o.od + o.cabin),
@@ -169,7 +182,7 @@ function buildScatterOption(od: DisplacementOD[]): EChartsCoreOption {
         symbol: 'triangle',
         symbolRotate: 180,
         symbolSize: (d: number[]) => Math.max(8, Math.sqrt(d[0]) * 1.6),
-        itemStyle: { color: COLORS.villain, opacity: 0.8 },
+        itemStyle: { color: villainColor, opacity: 0.8 },
         label: {
           position: 'top',
           fontSize: 10,
@@ -194,7 +207,7 @@ function buildScatterOption(od: DisplacementOD[]): EChartsCoreOption {
         data: victims,
         symbol: 'triangle',
         symbolSize: (d: number[]) => Math.max(8, Math.sqrt(d[0]) * 1.6),
-        itemStyle: { color: COLORS.victim, opacity: 0.8 },
+        itemStyle: { color: victimColor, opacity: 0.8 },
         label: {
           position: 'top',
           fontSize: 10,

@@ -18,7 +18,9 @@ import {
   sumBy,
   type DisplacementFilter,
 } from '@/utils/displacement'
-import { cabinColor, cabinLabel, sortCabins, COLORS } from '@/config/displacement'
+import { cabinLabel, sortCabins, COLORS } from '@/config/displacement'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
+import { paletteColors, pickColor } from '@/config/userPreferences'
 import {
   formatCurrency,
   formatCurrencyCompact,
@@ -72,12 +74,21 @@ function ReportingView({ data }: { data: DisplacementResponse }) {
   // Drempel-kleur voor displacement %: >3% rood, >1.5% magenta, anders neutraal.
   const pctAccent = displacementPct > 3 ? 'red' : displacementPct > 1.5 ? 'magenta' : 'neutral'
 
+  // Chart-paletten uit User Preferences (per chart-type).
+  const { chartPrefs } = useUserPreferences()
+  const barColor = pickColor(paletteColors(chartPrefs.bar), 0)
+  const lineColor = pickColor(paletteColors(chartPrefs.line), 1)
+  const donutColors = paletteColors(chartPrefs.donut)
+
   const monthOrder = data.months
   const trendOption = useMemo(
-    () => buildTrendOption(summary, monthOrder),
-    [summary, monthOrder],
+    () => buildTrendOption(summary, monthOrder, barColor, lineColor),
+    [summary, monthOrder, barColor, lineColor],
   )
-  const donutOption = useMemo(() => buildDonutOption(departures), [departures])
+  const donutOption = useMemo(
+    () => buildDonutOption(departures, donutColors),
+    [departures, donutColors],
+  )
 
   return (
     <div>
@@ -160,6 +171,8 @@ function peakMonth(
 function buildTrendOption(
   rows: DisplacementSummary[],
   monthOrder: string[],
+  barColor: string,
+  lineColor: string,
 ): EChartsCoreOption {
   const dispByMonth = new Map<string, number>()
   const revByMonth = new Map<string, number>()
@@ -199,7 +212,7 @@ function buildTrendOption(
         name: 'Displacement €',
         type: 'bar',
         data: dispData,
-        itemStyle: { color: COLORS.bars, borderRadius: [3, 3, 0, 0] },
+        itemStyle: { color: barColor, borderRadius: [3, 3, 0, 0] },
       },
       {
         name: 'Displacement %',
@@ -209,8 +222,8 @@ function buildTrendOption(
         smooth: true,
         symbol: 'circle',
         symbolSize: 6,
-        itemStyle: { color: COLORS.line },
-        lineStyle: { color: COLORS.line, width: 2 },
+        itemStyle: { color: lineColor },
+        lineStyle: { color: lineColor, width: 2 },
       },
     ],
   }
@@ -218,15 +231,16 @@ function buildTrendOption(
 
 function buildDonutOption(
   departures: { cabin: string; displacement: number }[],
+  palette: string[],
 ): EChartsCoreOption {
   const byCabin = new Map<string, number>()
   for (const d of departures) {
     byCabin.set(d.cabin, (byCabin.get(d.cabin) ?? 0) + d.displacement)
   }
-  const data = sortCabins([...byCabin.keys()]).map((cabin) => ({
+  const data = sortCabins([...byCabin.keys()]).map((cabin, i) => ({
     name: cabinLabel(cabin),
     value: Math.round(byCabin.get(cabin) ?? 0),
-    itemStyle: { color: cabinColor(cabin) },
+    itemStyle: { color: pickColor(palette, i) },
   }))
 
   return {

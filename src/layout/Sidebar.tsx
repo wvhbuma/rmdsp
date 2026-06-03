@@ -3,11 +3,13 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   HOME_ITEM,
   NAV_GROUPS,
+  filterNavGroups,
   findPathLocation,
   type NavLeaf,
   type NavSubgroup,
 } from '@/layout/navigation'
 import { Icon } from '@/layout/icons'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 /*
  * Klassen voor een nav-leaf. React Router v7's NavLink kan óf een className-
@@ -36,6 +38,9 @@ function subItemClass({ isActive }: { isActive: boolean }): string {
 
 export function Sidebar() {
   const { pathname } = useLocation()
+  const { isFeatureEnabled } = useUserPreferences()
+  // Verberg uitgeschakelde features (User Preferences → Feature Visibility).
+  const groups = filterNavGroups(NAV_GROUPS, isFeatureEnabled)
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => {
     const { groupKey, subgroupKey } = findPathLocation(pathname)
     const initial = new Set<string>()
@@ -87,7 +92,7 @@ export function Sidebar() {
           <span>{HOME_ITEM.label}</span>
         </NavLink>
 
-        {NAV_GROUPS.map((group) => {
+        {groups.map((group) => {
           const isOpen = openKeys.has(group.key)
           return (
             <div key={group.key} className="mt-1">
