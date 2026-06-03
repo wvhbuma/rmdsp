@@ -61,6 +61,16 @@ export const PALETTES: Record<PaletteId, Palette> = {
 
 export const PALETTE_IDS = Object.keys(PALETTES) as PaletteId[]
 
+/** Kleurenreeks van een palet. */
+export function paletteColors(id: PaletteId): string[] {
+  return PALETTES[id].colors
+}
+
+/** Pak kleur i uit een reeks, cyclisch (modulo) zodat indexen nooit out-of-range zijn. */
+export function pickColor(colors: string[], i: number): string {
+  return colors[i % colors.length] ?? colors[0]
+}
+
 export const DEFAULT_PALETTE: PaletteId = 'es-classic'
 
 export type ChartPrefs = Record<ChartType, PaletteId>
