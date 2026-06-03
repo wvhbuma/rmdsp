@@ -5,6 +5,57 @@ datum, wat gedaan, issues die we tegenkwamen, oplossingen.
 
 ---
 
+## Sessie — 2026-06-02 — Multi-Leg Displacement Analysis
+
+**Doel:** nieuwe nav-groep "Multi-Leg Analysis" met 3 pagina's (Displacement
+Reporting, Monthly Details, Departure Details), inclusief de Fase 1 data/chart-
+foundation (TanStack Query + ECharts) die nog niet bestond.
+
+Branch: `claude/displacement-analysis`
+
+### Scope-afwijking (expliciet met Wolter afgestemd)
+- De prompt ging uit van een bestaande WeeklyPerformance-blueprint
+  (`api/performance.ts`, `useWeeklyPerformance`, ECharts) op branch
+  `claude/demo-weekly-performance`. Die bestond NIET — repo stond op de Fase 0
+  wrap-up commit zonder TanStack Query/ECharts. Met Wolter afgesproken:
+  "displacement nu, foundation meebouwen" (wijkt af van Fase 1 scope-guard in
+  CLAUDE.md die alleen Weekly Performance toestaat).
+- Test-fixture `public/api/displacement.json` was niet aanwezig in de repo (Wolter
+  dacht van wel). **Voorlopig een deterministisch gegenereerde placeholder-fixture
+  geschreven** die exact de TypeScript-types volgt (48 summary / 768 departures /
+  192 od / 768 legs, 2 markten, Apr 2025–Mar 2026). Vervang door echte data zodra
+  beschikbaar — de fetch-laag pakt die transparant op.
+
+### Gedaan
+- Deps: `@tanstack/react-query` v5, `echarts` v6, `echarts-for-react`.
+- `QueryClientProvider` in `main.tsx` (buiten de tree, StrictMode-safe).
+- `src/types/displacement.ts`, `src/config/displacement.ts` (cabin-labels/kleuren/
+  volgorde + station-afkortingen + theme-token-classes), `src/api/displacement.ts`
+  (live API met fallback naar lokale fixture), `src/hooks/useDisplacement.ts`.
+- `src/utils/format.ts` + `src/utils/displacement.ts` (filter/aggregatie-helpers).
+- Gedeelde components: `EChart` (tree-shaken ECharts), `FilterBar` (macOS-menubar-
+  stijl), `KpiCard`, `SectionCard`, `MonthTable` (jaar-subtotalen, ES-gradient
+  header), `LfHeatmap` (custom HTML-tabel, sticky kolom, klikbare rijen),
+  `StateViews`.
+- 3 pagina's onder `src/pages/displacement/` + 3 routes + nav-groep + pageTitles
+  + 4 nieuwe icons.
+- Data-driven kleuren als Tailwind theme-tokens (cabin-*, lf-*, villain) i.p.v.
+  inline styles, conform CLAUDE.md "geen inline styling". Enige resterende inline
+  style is de ECharts-container-hoogte (library vereist het).
+
+### Status: groen
+`tsc -b`, `eslint`, `vite build` alle drie groen. Bundle ~1,13 MB (357 KB gzip);
+ECharts is de bulk — code-splitting/lazy-loading van de 3 pagina's is een logische
+vervolgstap (genoteerd, niet gedaan).
+
+### Nog te doen / let op
+- Echte `displacement.json` aanleveren (placeholder vervangen).
+- Pagina's nog niet door Wolter handmatig getest in de browser.
+- Cabin-control op Departures: tabs (heatmap/pax-flow) staan los van de FilterBar-
+  cabin (die filtert de vertrektabel). Bewuste keuze — even checken of dat klopt.
+
+---
+
 ## Sessie 1 — 2026-04-22
 
 **Doel:** Fase 0 doorlopen (7 stappen).

@@ -1,11 +1,19 @@
 import { StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MsalProvider } from '@azure/msal-react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from '@/App'
 import { ConfigError } from '@/pages/ConfigError'
 import { getMsalInstance } from '@/config/msal'
 import { missingEntraVars } from '@/config/env'
 import '@/styles/globals.css'
+
+/*
+ * Eén QueryClient voor de hele app (server-state cache, Fase 1-foundation).
+ * Buiten de component-tree zodat StrictMode's dubbele mount geen tweede client
+ * aanmaakt.
+ */
+const queryClient = new QueryClient()
 
 /*
  * Bootstrap de React-app.
@@ -33,7 +41,9 @@ async function bootstrap(root: Root): Promise<void> {
   root.render(
     <StrictMode>
       <MsalProvider instance={instance}>
-        <App />
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
       </MsalProvider>
     </StrictMode>,
   )

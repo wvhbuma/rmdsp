@@ -9,6 +9,12 @@ export interface NavLeaf {
   label: string
   path: string
   icon: IconName
+  /*
+   * Exacte match afdwingen voor NavLink. Nodig wanneer dit pad een prefix is van
+   * zustergroep-paden (bv. /displacement vs /displacement/monthly), anders blijft
+   * de leaf actief op kind-routes.
+   */
+  end?: boolean
 }
 
 export interface NavSubgroup {
@@ -85,6 +91,16 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'eye',
         items: [
           { label: 'Competitor Intel', path: '/competitor-intel', icon: 'eye' },
+        ],
+      },
+      {
+        key: 'bo-multileg',
+        label: 'Multi-Leg',
+        icon: 'git-merge',
+        items: [
+          { label: 'Displacement Reporting', path: '/displacement', icon: 'pie-chart', end: true },
+          { label: 'Monthly Details', path: '/displacement/monthly', icon: 'crosshair' },
+          { label: 'Departure Details', path: '/displacement/departures', icon: 'thermometer' },
         ],
       },
     ],

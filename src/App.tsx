@@ -22,6 +22,9 @@ import { BudgetTargets } from '@/pages/_placeholders/BudgetTargets'
 import { AuditTrail } from '@/pages/_placeholders/AuditTrail'
 import { DecisionLog } from '@/pages/_placeholders/DecisionLog'
 import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
+import { DisplacementReporting } from '@/pages/displacement/DisplacementReporting'
+import { DisplacementMonthly } from '@/pages/displacement/DisplacementMonthly'
+import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartures'
 
 export function App() {
   return (
@@ -46,6 +49,11 @@ export function App() {
             <Route path="operational-impact" element={<OperationalImpact />} />
             <Route path="margin-management" element={<MarginManagement />} />
             <Route path="competitor-intel" element={<CompetitorIntel />} />
+
+            {/* Multi-Leg Analysis */}
+            <Route path="displacement" element={<DisplacementReporting />} />
+            <Route path="displacement/monthly" element={<DisplacementMonthly />} />
+            <Route path="displacement/departures" element={<DisplacementDepartures />} />
 
             {/* Business Management */}
             <Route path="distribution-channels" element={<DistributionChannels />} />
