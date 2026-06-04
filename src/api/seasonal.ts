@@ -14,6 +14,7 @@ import type {
   ImplementArgs,
   ImplementResult,
   PipelineResponse,
+  ProductsResponse,
   RunPipelineArgs,
   SeasonalResults,
   SeasonalSession,
@@ -55,8 +56,8 @@ export function fetchProducts(
   start: string,
   end: string,
   signal?: AbortSignal,
-): Promise<unknown> {
-  return postJson<unknown>('/api/seasonal/products', { routes, start, end }, signal)
+): Promise<ProductsResponse> {
+  return postJson<ProductsResponse>('/api/seasonal/products', { routes, start, end }, signal)
 }
 
 export function runPipeline({
@@ -65,6 +66,7 @@ export function runPipeline({
   start,
   end,
   config,
+  profileAssignments,
 }: RunPipelineArgs): Promise<PipelineResponse> {
   return postJson<PipelineResponse>('/api/seasonal/run', {
     name,
@@ -72,6 +74,7 @@ export function runPipeline({
     start,
     end,
     config,
+    profile_assignments: profileAssignments,
   })
 }
 

@@ -4,16 +4,25 @@
  *   1. Routes selecteren (data uit useDiscoverRoutes)
  *   2. Pipeline draaien (useRunPipeline) → samenvatting → door naar Overview
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 import {
   useDiscoverRoutes,
   useRunPipeline,
+  useSeasonalProducts,
   useSeasonalSessions,
 } from '@/hooks/useSeasonal'
-import type { DiscoverResponse, PipelineSummary } from '@/types/seasonal'
+import type {
+  DiscoverResponse,
+  PipelineSummary,
+  ProfileAssignment,
+  ProfileName,
+  SeasonalProduct,
+} from '@/types/seasonal'
 import { cabinLabel } from '@/config/displacement'
+import { PROFILE_COLORS } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { ProgressSteps } from '@/components/seasonal/ProgressSteps'
 import { SectionCard } from '@/components/displacement/SectionCard'
@@ -24,7 +33,47 @@ import {
   LoadingState,
 } from '@/components/displacement/StateViews'
 
-const STEPS = ['Season', 'Routes', 'Pipeline']
+const STEPS = ['Season', 'Routes', 'Profiles', 'Pipeline']
+
+const PROFILES: ProfileName[] = ['High', 'Med', 'Low']
+
+/** Eén uniek vertrek (datum + richting + trein). */
+interface Departure {
+  key: string
+  date: string
+  market: string
+  train: string
+}
+
+function departureKey(date: string, market: string, train: string): string {
+  return `${date}|${market}|${train}`
+}
+
+/** Unieke vertrekken uit de producten, gesorteerd op datum (dan trein). */
+function deriveDepartures(products: SeasonalProduct[]): Departure[] {
+  const map = new Map<string, Departure>()
+  for (const p of products) {
+    const train = String(p.trainNumber)
+    const key = departureKey(p.date, p.market, train)
+    if (!map.has(key)) map.set(key, { key, date: p.date, market: p.market, train })
+  }
+  return [...map.values()].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.train.localeCompare(b.train),
+  )
+}
+
+const DOW_NL = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za']
+
+function dow(date: string): string {
+  const d = new Date(`${date}T00:00:00`)
+  return Number.isNaN(d.getTime()) ? '' : DOW_NL[d.getDay()]
+}
+
+function monthLabel(date: string): string {
+  const d = new Date(`${date}-01T00:00:00`)
+  if (Number.isNaN(d.getTime())) return date
+  return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(d)
+}
 
 export function NewSeason() {
   const navigate = useNavigate()
@@ -36,15 +85,29 @@ export function NewSeason() {
   // Pas zoeken zodra de gebruiker op "Zoek routes" klikt (niet bij elke toets).
   const [search, setSearch] = useState<{ start: string; end: string } | null>(null)
   const [selected, setSelected] = useState<string[]>([])
+  // Profiel per vertrek-key; ontbrekend = 'Med' (default).
+  const [profiles, setProfiles] = useState<Record<string, ProfileName>>({})
 
   const discover = useDiscoverRoutes(search?.start ?? '', search?.end ?? '')
+  const products = useSeasonalProducts(
+    selected,
+    search?.start ?? '',
+    search?.end ?? '',
+    step >= 2,
+  )
   const runPipeline = useRunPipeline()
+
+  const departures = useMemo(
+    () => deriveDepartures(products.data?.products ?? []),
+    [products.data],
+  )
 
   const canSearch = name.trim() !== '' && start !== '' && end !== '' && start <= end
 
   function onSearch() {
     setSearch({ start, end })
     setSelected([])
+    setProfiles({})
     setStep(1)
   }
 
@@ -54,9 +117,24 @@ export function NewSeason() {
     )
   }
 
+  function profileOf(dep: Departure): ProfileName {
+    return profiles[dep.key] ?? 'Med'
+  }
+
   function onRun() {
     if (!search) return
-    runPipeline.mutate({ name: name.trim(), routes: selected, start: search.start, end: search.end })
+    const profileAssignments: ProfileAssignment[] = departures.map((d) => ({
+      date: d.date,
+      market: d.market,
+      profile: profileOf(d),
+    }))
+    runPipeline.mutate({
+      name: name.trim(),
+      routes: selected,
+      start: search.start,
+      end: search.end,
+      profileAssignments,
+    })
   }
 
   return (
@@ -94,6 +172,17 @@ export function NewSeason() {
       )}
 
       {step === 2 && (
+        <StepProfiles
+          products={products}
+          departures={departures}
+          profiles={profiles}
+          onSetProfiles={setProfiles}
+          onBack={() => setStep(1)}
+          onNext={() => setStep(3)}
+        />
+      )}
+
+      {step === 3 && (
         <StepPipeline
           name={name}
           start={search?.start ?? start}
@@ -102,7 +191,7 @@ export function NewSeason() {
           status={runPipeline.status}
           summary={runPipeline.data?.summary}
           error={runPipeline.error}
-          onBack={() => setStep(1)}
+          onBack={() => setStep(2)}
           onRun={onRun}
           onGoOverview={() => navigate('/season/overview')}
         />
@@ -324,7 +413,309 @@ function RouteCard({
   )
 }
 
-/* ── Stap 2: pipeline draaien ───────────────────────────────────────────── */
+/* ── Stap 2: profielen toekennen ────────────────────────────────────────── */
+
+function StepProfiles({
+  products,
+  departures,
+  profiles,
+  onSetProfiles,
+  onBack,
+  onNext,
+}: {
+  products: ReturnType<typeof useSeasonalProducts>
+  departures: Departure[]
+  profiles: Record<string, ProfileName>
+  onSetProfiles: (updater: (prev: Record<string, ProfileName>) => Record<string, ProfileName>) => void
+  onBack: () => void
+  onNext: () => void
+}) {
+  return (
+    <SectionCard
+      title="Assign profiles"
+      subtitle="Set a demand profile per departure (default: Med)"
+    >
+      <ProfileBody
+        products={products}
+        departures={departures}
+        profiles={profiles}
+        onSetProfiles={onSetProfiles}
+      />
+      <div className="mt-4 flex justify-between">
+        <SecondaryButton onClick={onBack}>Back</SecondaryButton>
+        <PrimaryButton onClick={onNext} disabled={departures.length === 0}>
+          Next
+        </PrimaryButton>
+      </div>
+    </SectionCard>
+  )
+}
+
+function ProfileBody({
+  products,
+  departures,
+  profiles,
+  onSetProfiles,
+}: {
+  products: ReturnType<typeof useSeasonalProducts>
+  departures: Departure[]
+  profiles: Record<string, ProfileName>
+  onSetProfiles: (updater: (prev: Record<string, ProfileName>) => Record<string, ProfileName>) => void
+}) {
+  const [bulkFrom, setBulkFrom] = useState('')
+  const [bulkTo, setBulkTo] = useState('')
+  const [bulkProfile, setBulkProfile] = useState<ProfileName>('Med')
+  const [importMsg, setImportMsg] = useState('')
+
+  if (products.isPending) return <LoadingState label="Loading departures…" />
+  if (products.isError) {
+    return <ErrorState title="Could not load seasonal data" message={products.error.message} />
+  }
+  if (departures.length === 0) {
+    return <EmptyState message="No departures found for this selection." />
+  }
+
+  function setOne(key: string, profile: ProfileName) {
+    onSetProfiles((prev) => ({ ...prev, [key]: profile }))
+  }
+
+  function applyBulk() {
+    onSetProfiles((prev) => {
+      const next = { ...prev }
+      for (const d of departures) {
+        if (bulkFrom !== '' && d.date < bulkFrom) continue
+        if (bulkTo !== '' && d.date > bulkTo) continue
+        next[d.key] = bulkProfile
+      }
+      return next
+    })
+  }
+
+  async function handleImport(file: File) {
+    setImportMsg('')
+    try {
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array', cellDates: true })
+      const sheet = wb.Sheets[wb.SheetNames[0]]
+      if (!sheet) return
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
+
+      const byTrainDate = new Map<string, string>()
+      for (const d of departures) byTrainDate.set(`${d.train}|${d.date}`, d.key)
+
+      const updates: Record<string, ProfileName> = {}
+      let applied = 0
+      for (const r of rows) {
+        const train = pickField(r, ['Treinnummer', 'TrainNumber', 'Train', 'Trein'])
+        const dateRaw = pickField(r, ['Datum', 'Date'])
+        const profRaw = pickField(r, ['Verwachting', 'Profile', 'Profiel'])
+        if (train === undefined || dateRaw === undefined || profRaw === undefined) continue
+        const profile = normalizeProfile(profRaw)
+        if (!profile) continue
+        const key = byTrainDate.get(`${String(train).trim()}|${normalizeDate(dateRaw)}`)
+        if (key) {
+          updates[key] = profile
+          applied += 1
+        }
+      }
+      if (applied > 0) onSetProfiles((prev) => ({ ...prev, ...updates }))
+      setImportMsg(`Imported ${applied} assignment(s).`)
+    } catch {
+      setImportMsg('Could not read the Excel file.')
+    }
+  }
+
+  // Groepeer op maand voor leesbaarheid.
+  const groups = new Map<string, Departure[]>()
+  for (const d of departures) {
+    const m = d.date.slice(0, 7)
+    const list = groups.get(m) ?? []
+    list.push(d)
+    groups.set(m, list)
+  }
+  const months = [...groups.keys()].sort()
+
+  return (
+    <div className="space-y-4">
+      {/* Bulk + import */}
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-rm-border bg-rm-bg p-3">
+        <BulkField label="From">
+          <input
+            type="date"
+            value={bulkFrom}
+            onChange={(e) => setBulkFrom(e.target.value)}
+            className="rounded-md border border-rm-border bg-rm-surface px-2 py-1 font-body text-[13px] text-rm-dark focus:border-es-blue focus:outline-none"
+          />
+        </BulkField>
+        <BulkField label="To">
+          <input
+            type="date"
+            value={bulkTo}
+            onChange={(e) => setBulkTo(e.target.value)}
+            className="rounded-md border border-rm-border bg-rm-surface px-2 py-1 font-body text-[13px] text-rm-dark focus:border-es-blue focus:outline-none"
+          />
+        </BulkField>
+        <BulkField label="Profile">
+          <ProfileSelect value={bulkProfile} onChange={setBulkProfile} />
+        </BulkField>
+        <PrimaryButton onClick={applyBulk}>Apply</PrimaryButton>
+
+        <label className="ml-auto cursor-pointer rounded-md border border-rm-border px-4 py-2 font-display text-sm font-medium text-rm-gray hover:bg-rm-gray-light">
+          Import Excel
+          <input
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void handleImport(file)
+              e.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      {importMsg && <p className="font-body text-xs text-rm-gray">{importMsg}</p>}
+
+      {/* Tabel per maand */}
+      <div className="overflow-x-auto rounded-lg border border-rm-border">
+        <table className="w-full border-collapse font-body text-[13px]">
+          <thead>
+            <tr className="bg-rm-gray-light text-rm-dark">
+              <th className="px-3 py-2 text-left font-display font-semibold">Date</th>
+              <th className="px-3 py-2 text-left font-display font-semibold">DOW</th>
+              <th className="px-3 py-2 text-left font-display font-semibold">Train</th>
+              <th className="px-3 py-2 text-left font-display font-semibold">Direction</th>
+              <th className="px-3 py-2 text-left font-display font-semibold">Profile</th>
+            </tr>
+          </thead>
+          <tbody>
+            {months.map((m) => (
+              <ProfileMonthGroup
+                key={m}
+                month={m}
+                departures={groups.get(m)!}
+                profiles={profiles}
+                onSet={setOne}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ProfileMonthGroup({
+  month,
+  departures,
+  profiles,
+  onSet,
+}: {
+  month: string
+  departures: Departure[]
+  profiles: Record<string, ProfileName>
+  onSet: (key: string, profile: ProfileName) => void
+}) {
+  return (
+    <>
+      <tr className="border-t border-rm-border bg-rm-bg">
+        <td colSpan={5} className="px-3 py-1.5 font-display text-[11px] uppercase tracking-wide text-rm-gray">
+          {monthLabel(month)}
+        </td>
+      </tr>
+      {departures.map((d) => (
+        <tr key={d.key} className="border-t border-rm-border hover:bg-rm-gray-light/50">
+          <td className="px-3 py-1.5 font-medium text-rm-dark">{d.date}</td>
+          <td className="px-3 py-1.5 text-rm-gray">{dow(d.date)}</td>
+          <td className="px-3 py-1.5 text-rm-gray">{d.train}</td>
+          <td className="px-3 py-1.5 text-rm-gray">{d.market}</td>
+          <td className="px-3 py-1.5">
+            <ProfileSelect
+              value={profiles[d.key] ?? 'Med'}
+              onChange={(p) => onSet(d.key, p)}
+            />
+          </td>
+        </tr>
+      ))}
+    </>
+  )
+}
+
+function ProfileSelect({
+  value,
+  onChange,
+}: {
+  value: ProfileName
+  onChange: (p: ProfileName) => void
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {/* Kleur uit PROFILE_COLORS (config) — datagestuurd, daarom inline. */}
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ backgroundColor: PROFILE_COLORS[value] }}
+      />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as ProfileName)}
+        className="rounded-md border border-rm-border bg-rm-surface px-2 py-1 font-body text-[13px] text-rm-dark focus:border-es-blue focus:outline-none"
+      >
+        {PROFILES.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </select>
+    </span>
+  )
+}
+
+function BulkField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block font-display text-[11px] uppercase tracking-wide text-rm-gray">
+        {label}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+/** Eerste niet-lege waarde uit een rij voor één van de kandidaat-kolomnamen. */
+function pickField(row: Record<string, unknown>, keys: string[]): unknown {
+  for (const k of keys) {
+    const v = row[k]
+    if (v !== undefined && v !== null && v !== '') return v
+  }
+  return undefined
+}
+
+/** "Hoog"/"Midden"/"Laag" of "High"/"Med"/"Low" → ProfileName. */
+function normalizeProfile(raw: unknown): ProfileName | undefined {
+  const s = String(raw).trim().toLowerCase()
+  if (s === 'hoog' || s === 'high') return 'High'
+  if (s === 'midden' || s === 'med' || s === 'medium' || s === 'mid') return 'Med'
+  if (s === 'laag' || s === 'low') return 'Low'
+  return undefined
+}
+
+/** Normaliseer Excel-datum (Date, serial-Date, of string) naar YYYY-MM-DD. */
+function normalizeDate(raw: unknown): string {
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    const y = raw.getFullYear()
+    const m = String(raw.getMonth() + 1).padStart(2, '0')
+    const d = String(raw.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  const s = String(raw).trim()
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  const dm = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
+  if (dm) return `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`
+  const parsed = new Date(s)
+  return Number.isNaN(parsed.getTime()) ? s : normalizeDate(parsed)
+}
+
+/* ── Stap 3: pipeline draaien ───────────────────────────────────────────── */
 
 function StepPipeline({
   name,

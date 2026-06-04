@@ -17,6 +17,7 @@ import type {
   ImplementArgs,
   ImplementResult,
   PipelineResponse,
+  ProductsResponse,
   RunPipelineArgs,
   SeasonalResults,
   SeasonalSession,
@@ -30,6 +31,20 @@ export function useDiscoverRoutes(
     queryKey: ['seasonal', 'discover', start, end],
     queryFn: ({ signal }) => api.discoverRoutes(start, end, signal),
     enabled: Boolean(start) && Boolean(end),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useSeasonalProducts(
+  routes: string[],
+  start: string,
+  end: string,
+  enabled: boolean,
+): UseQueryResult<ProductsResponse, Error> {
+  return useQuery({
+    queryKey: ['seasonal', 'products', routes, start, end],
+    queryFn: ({ signal }) => api.fetchProducts(routes, start, end, signal),
+    enabled: enabled && routes.length > 0 && Boolean(start) && Boolean(end),
     staleTime: 5 * 60_000,
   })
 }

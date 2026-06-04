@@ -120,6 +120,19 @@ export interface SeasonalResults {
   sim: SeasonalSimulation[]
 }
 
+/** Eén CY-product/vertrek uit /api/seasonal/products. */
+export interface SeasonalProduct {
+  productId: number
+  date: string
+  trainNumber: string
+  market: string
+  modelCabin: CabinCode
+}
+
+export interface ProductsResponse {
+  products: SeasonalProduct[]
+}
+
 // ── Config ──
 export interface DestinationConfig {
   routes: string[]
@@ -139,12 +152,21 @@ export interface SeasonalConfig {
 }
 
 // ── Request payloads ──
+
+/** Profieltoekenning per vertrek, meegegeven aan de pipeline. */
+export interface ProfileAssignment {
+  date: string
+  market: string
+  profile: ProfileName
+}
+
 export interface RunPipelineArgs {
   name: string
   routes: string[]
   start: string
   end: string
   config?: Partial<SeasonalConfig>
+  profileAssignments?: ProfileAssignment[]
 }
 
 /*
