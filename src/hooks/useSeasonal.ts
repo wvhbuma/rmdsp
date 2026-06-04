@@ -85,3 +85,11 @@ export function useImplement(): UseMutationResult<
 export function useSaveConfig(): UseMutationResult<void, Error, SeasonalConfig> {
   return useMutation({ mutationFn: api.saveConfig })
 }
+
+export function useSeasonalConfig(): UseQueryResult<SeasonalConfig, Error> {
+  return useQuery({
+    queryKey: ['seasonal', 'config'],
+    queryFn: api.getConfig,
+    staleTime: 60_000,
+  })
+}

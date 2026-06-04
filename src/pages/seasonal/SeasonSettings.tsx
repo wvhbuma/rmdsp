@@ -12,7 +12,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { DestinationConfig, SeasonalConfig } from '@/types/seasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { ROUTE_CONFIG } from '@/config/routes'
-import { useRunPipeline, useSaveConfig, useSeasonalResults } from '@/hooks/useSeasonal'
+import {
+  useRunPipeline,
+  useSaveConfig,
+  useSeasonalConfig,
+  useSeasonalResults,
+} from '@/hooks/useSeasonal'
 import { DestinationTabs } from '@/components/seasonal/DestinationTabs'
 import { NumberInput } from '@/components/seasonal/NumberInput'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
@@ -89,6 +94,8 @@ export function SeasonSettings() {
   const results = useSeasonalResults()
   const runPipeline = useRunPipeline()
   const saveConfigMutation = useSaveConfig()
+  // Config staat los van sessies: primaire bron is GET /api/seasonal/config.
+  const configQuery = useSeasonalConfig()
   const session = results.data?._session
 
   const [config, setConfig] = useState<SeasonalConfig>(() => clone(DEFAULT_CONFIG))
@@ -104,9 +111,9 @@ export function SeasonSettings() {
   )
   const [savedFlash, setSavedFlash] = useState(false)
   const flashTimer = useRef<number | null>(null)
-  // Voorkomt dat de sessie-config de hardcoded defaults — of een handmatig
+  // Voorkomt dat de server-config de hardcoded defaults — of een handmatig
   // geladen bestand — overschrijft nadat hij eenmaal is toegepast.
-  const sessionApplied = useRef(false)
+  const configApplied = useRef(false)
 
   const dirty = JSON.stringify(config) !== savedSnapshot
 
@@ -125,39 +132,42 @@ export function SeasonSettings() {
         setSavedFlash(true)
         if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
         flashTimer.current = window.setTimeout(() => setSavedFlash(false), 2000)
+        void queryClient.invalidateQueries({ queryKey: ['seasonal', 'config'] })
       },
     })
   }
 
-  // Auto-load: gebruik de config van de huidige sessie als default (i.p.v. de
-  // hardcoded defaults) zodra die binnenkomt. Alleen het destinations-formaat
-  // (van Export/Load Config) mag overschrijven; het pipeline-formaat
-  // ({constraints, routes}) negeren we → defaults blijven staan.
+  // Auto-load: gebruik de server-config (GET /api/seasonal/config) als default
+  // zodra die binnenkomt. Alleen het destinations-formaat (van Export/Load
+  // Config) mag overschrijven; leeg/error/ander formaat → hardcoded defaults.
   useEffect(() => {
-    if (sessionApplied.current) return
-    const cfg = session?.config
-    if (!cfg) return // nog geen config → wachten
-    sessionApplied.current = true
+    if (configApplied.current) return
+    const cfg = configQuery.data
+    if (!cfg) return // nog aan het laden (of error) → wachten
+    configApplied.current = true
     if (typeof cfg !== 'object' || !cfg.destinations || typeof cfg.destinations !== 'object') {
-      return // pipeline-formaat of ongeldig → val terug op hardcoded defaults
+      return // leeg of ongeldig formaat → val terug op hardcoded defaults
     }
     const loaded = clone(cfg)
     setConfig(loaded)
-    // De sessie-config is de huidige server-versie → snapshot bijwerken.
+    // De server-config is de huidige opgeslagen versie → snapshot bijwerken.
     setSavedSnapshot(JSON.stringify(loaded))
     const keys = Object.keys(loaded.destinations)
     setActiveDest((prev) => (keys.includes(prev) ? prev : (keys[0] ?? prev)))
-    setLoadMsg('Config loaded from session')
-  }, [session])
+    setLoadMsg('Config loaded')
+  }, [configQuery.data])
 
   const dest = config.destinations[activeDest]
 
   function reRunWithSettings() {
     if (!session) return
     console.log('Re-run config:', config)
-    // Sla de config ook op (los van de run), zodat de sessie 'm bewaart.
+    // Sla de config ook op (los van de run); de server leest 'm van disk.
     saveConfigMutation.mutate(config, {
-      onSuccess: () => setSavedSnapshot(JSON.stringify(config)),
+      onSuccess: () => {
+        setSavedSnapshot(JSON.stringify(config))
+        void queryClient.invalidateQueries({ queryKey: ['seasonal', 'config'] })
+      },
     })
     runPipeline.mutate(
       {
@@ -203,8 +213,8 @@ export function SeasonSettings() {
       try {
         const parsed = JSON.parse(String(reader.result)) as SeasonalConfig
         if (parsed && typeof parsed === 'object' && parsed.destinations) {
-          // Een handmatig geladen bestand wint van de sessie-config.
-          sessionApplied.current = true
+          // Een handmatig geladen bestand wint van de server-config.
+          configApplied.current = true
           setConfig(parsed)
           const keys = Object.keys(parsed.destinations)
           if (keys.length > 0 && !keys.includes(activeDest)) setActiveDest(keys[0])

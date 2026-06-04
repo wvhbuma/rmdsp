@@ -84,11 +84,16 @@ export function fetchResults(signal?: AbortSignal): Promise<SeasonalResults> {
 }
 
 /*
- * POST /api/seasonal/config
- * Body: het volledige destinations-config object (SeasonalConfig). De Flask
- * server slaat dit op in het Config-veld van de laatst actieve SeasonalSession.
- * Geen response-payload nodig — we parsen de body daarom niet.
+ * GET /api/seasonal/config → leest seasonal-config.json van disk.
+ * POST /api/seasonal/config → schrijft het config-object naar disk.
+ * De config staat los van een sessie.
  */
+export async function getConfig(): Promise<SeasonalConfig> {
+  const res = await fetch(`${BASE}/api/seasonal/config`)
+  if (!res.ok) throw new Error('Failed to load config')
+  return (await res.json()) as SeasonalConfig
+}
+
 export async function saveConfig(config: SeasonalConfig): Promise<void> {
   const res = await fetch(`${BASE}/api/seasonal/config`, {
     method: 'POST',
