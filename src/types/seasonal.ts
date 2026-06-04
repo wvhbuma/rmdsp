@@ -124,6 +124,11 @@ export interface SeasonalSessionInfo {
   seasonEnd: string
   /** Optioneel: de config waarmee de sessie is gedraaid (voor auto-load in Settings). */
   config?: SeasonalConfig
+  /** Onderstaande velden zijn optioneel — oude API's sturen ze niet mee. */
+  id?: string | number
+  createdAt?: string
+  status?: 'draft' | 'reviewed' | 'implemented'
+  productCount?: number
 }
 
 export interface SeasonalResults {

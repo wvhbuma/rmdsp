@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
 import { useRunPipeline, useSeasonalResults } from '@/hooks/useSeasonal'
 import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
+import { SessionBadge } from '@/components/seasonal/SessionBadge'
 import { CABIN_COLORS, CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { COLORS } from '@/config/displacement'
 import {
@@ -212,11 +213,7 @@ function OverviewView({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display font-bold text-xl text-rm-dark">Season Overview</h1>
-          {session && (
-            <p className="font-body text-sm text-rm-gray">
-              {session.name} · {session.seasonStart} – {session.seasonEnd}
-            </p>
-          )}
+          {session && <SessionBadge session={session} />}
         </div>
         <ReRunPipeline session={session} />
       </div>

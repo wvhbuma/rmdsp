@@ -10,11 +10,12 @@
  */
 import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
-import type { SeasonalTarget } from '@/types/seasonal'
+import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
 import { useSeasonalResults } from '@/hooks/useSeasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { SectionCard } from '@/components/displacement/SectionCard'
+import { SessionBadge } from '@/components/seasonal/SessionBadge'
 import {
   EmptyState,
   ErrorState,
@@ -33,7 +34,7 @@ export function BudgetTargets() {
     return <NoSeasonData message="No targets yet." />
   }
 
-  return <TargetsView targets={query.data.targets} />
+  return <TargetsView targets={query.data.targets} session={query.data._session} />
 }
 
 const ALL = 'all'
@@ -70,7 +71,13 @@ function cabinRank(cabin: string): number {
   return i === -1 ? CABIN_ORDER.length : i
 }
 
-function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
+function TargetsView({
+  targets,
+  session,
+}: {
+  targets: SeasonalTarget[]
+  session?: SeasonalSessionInfo
+}) {
   const [route, setRoute] = useState<string>(ALL)
   const [cabin, setCabin] = useState<string>(ALL)
   const [month, setMonth] = useState<string>(ALL)
@@ -132,9 +139,13 @@ function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display font-bold text-xl text-rm-dark">Budget &amp; Targets</h1>
-          <p className="font-body text-sm text-rm-gray">
-            Season targets per departure with prior-year (PY) indices.
-          </p>
+          {session ? (
+            <SessionBadge session={session} />
+          ) : (
+            <p className="font-body text-sm text-rm-gray">
+              Season targets per departure with prior-year (PY) indices.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <FilterSelect label="Route" value={route} onChange={setRoute} options={markets} />
