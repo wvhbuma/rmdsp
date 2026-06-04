@@ -6,11 +6,13 @@
  * (revenue-bar per cabin, units-donut per cabin). Volgt het option-builder- en
  * KpiCard-patroon van DisplacementReporting.
  */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { EChartsCoreOption } from 'echarts/core'
-import type { SeasonalTarget } from '@/types/seasonal'
-import { useSeasonalResults } from '@/hooks/useSeasonal'
+import { useQueryClient } from '@tanstack/react-query'
+import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
+import { useRunPipeline, useSeasonalResults } from '@/hooks/useSeasonal'
+import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import { CABIN_COLORS, CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { COLORS } from '@/config/displacement'
 import {
@@ -36,7 +38,58 @@ export function SeasonOverview() {
     return <NoSeasonData message="No targets yet." />
   }
 
-  return <OverviewView targets={query.data.targets} />
+  return <OverviewView targets={query.data.targets} session={query.data._session} />
+}
+
+/* ── Re-run pipeline ────────────────────────────────────────────────────── */
+
+function ReRunPipeline({ session }: { session?: SeasonalSessionInfo }) {
+  const queryClient = useQueryClient()
+  const runPipeline = useRunPipeline()
+  const [confirm, setConfirm] = useState(false)
+
+  function reRun() {
+    if (!session) return
+    runPipeline.mutate(
+      {
+        name: session.name,
+        routes: session.routes,
+        start: session.seasonStart,
+        end: session.seasonEnd,
+      },
+      {
+        onSuccess: () => {
+          setConfirm(false)
+          // Nieuwe resultaten ophalen.
+          void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+        },
+      },
+    )
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirm(true)}
+        disabled={!session || runPipeline.isPending}
+        title={session ? undefined : 'No session info available'}
+        className="rounded-md border border-es-blue px-4 py-2 font-display text-sm font-medium text-es-blue transition-colors hover:bg-es-blue/5 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {runPipeline.isPending ? 'Re-running…' : 'Re-run Pipeline'}
+      </button>
+      {confirm && session && (
+        <ConfirmDialog
+          title="Re-run pipeline"
+          message={`Re-run pipeline for ${session.name} with current settings?`}
+          confirmLabel="Re-run"
+          busy={runPipeline.isPending}
+          onCancel={() => setConfirm(false)}
+          onConfirm={reRun}
+        />
+      )}
+    </>
+  )
 }
 
 /* ── Aggregatie ─────────────────────────────────────────────────────────── */
@@ -98,7 +151,13 @@ function monthLabel(key: string): string {
   return new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' }).format(d)
 }
 
-function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
+function OverviewView({
+  targets,
+  session,
+}: {
+  targets: SeasonalTarget[]
+  session?: SeasonalSessionInfo
+}) {
   const total = useMemo(() => {
     const agg = emptyAgg()
     for (const t of targets) addTarget(agg, t)
@@ -149,6 +208,19 @@ function OverviewView({ targets }: { targets: SeasonalTarget[] }) {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display font-bold text-xl text-rm-dark">Season Overview</h1>
+          {session && (
+            <p className="font-body text-sm text-rm-gray">
+              {session.name} · {session.seasonStart} – {session.seasonEnd}
+            </p>
+          )}
+        </div>
+        <ReRunPipeline session={session} />
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
         <KpiCard label="Departures" value={formatNumber(departures)} />

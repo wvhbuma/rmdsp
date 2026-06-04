@@ -116,10 +116,20 @@ export interface PipelineResponse {
   excel: string
 }
 
+/** Sessie-info bij de laatst berekende resultaten (uit het _session veld). */
+export interface SeasonalSessionInfo {
+  name: string
+  routes: string[]
+  seasonStart: string
+  seasonEnd: string
+}
+
 export interface SeasonalResults {
   targets: SeasonalTarget[]
   masks: SeasonalMask[]
   sim: SeasonalSimulation[]
+  /** Aanwezig in /api/seasonal/results/latest; beschrijft de huidige sessie. */
+  _session?: SeasonalSessionInfo
 }
 
 /** Eén CY-product/vertrek uit /api/seasonal/products. */

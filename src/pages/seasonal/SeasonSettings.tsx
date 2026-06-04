@@ -7,12 +7,16 @@
  * uit @/types/seasonal.
  */
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import type { DestinationConfig, SeasonalConfig } from '@/types/seasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { ROUTE_CONFIG } from '@/config/routes'
+import { useRunPipeline, useSeasonalResults } from '@/hooks/useSeasonal'
 import { DestinationTabs } from '@/components/seasonal/DestinationTabs'
 import { NumberInput } from '@/components/seasonal/NumberInput'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
+import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import { SectionCard } from '@/components/displacement/SectionCard'
 
 const ELASTICITY_MONTHS = ['Nov', 'Dec', 'Jan']
@@ -80,12 +84,39 @@ const CONSTRAINT_FIELDS: {
 ]
 
 export function SeasonSettings() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const results = useSeasonalResults()
+  const runPipeline = useRunPipeline()
+  const session = results.data?._session
+
   const [config, setConfig] = useState<SeasonalConfig>(() => clone(DEFAULT_CONFIG))
   const destinations = Object.keys(config.destinations)
   const [activeDest, setActiveDest] = useState<string>(destinations[0] ?? '')
   const [month, setMonth] = useState<string>(ELASTICITY_MONTHS[0])
+  const [confirmRerun, setConfirmRerun] = useState(false)
 
   const dest = config.destinations[activeDest]
+
+  function reRunWithSettings() {
+    if (!session) return
+    runPipeline.mutate(
+      {
+        name: session.name,
+        routes: session.routes,
+        start: session.seasonStart,
+        end: session.seasonEnd,
+        config,
+      },
+      {
+        onSuccess: () => {
+          setConfirmRerun(false)
+          void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+          navigate('/season/overview')
+        },
+      },
+    )
+  }
 
   function updateActive(updater: (d: DestinationConfig) => DestinationConfig) {
     setConfig((prev) => ({
@@ -153,6 +184,15 @@ export function SeasonSettings() {
             className="rounded-md bg-es-blue px-4 py-2 font-display text-sm font-medium text-white hover:opacity-90"
           >
             Export config
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmRerun(true)}
+            disabled={!session || runPipeline.isPending}
+            title={session ? undefined : 'No session info available'}
+            className="rounded-md border border-es-blue px-4 py-2 font-display text-sm font-medium text-es-blue hover:bg-es-blue/5 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {runPipeline.isPending ? 'Re-running…' : 'Re-run with these settings'}
           </button>
           <button
             type="button"
@@ -294,6 +334,17 @@ export function SeasonSettings() {
             </table>
           </SectionCard>
         </>
+      )}
+
+      {confirmRerun && session && (
+        <ConfirmDialog
+          title="Re-run pipeline"
+          message={`Re-run pipeline for ${session.name} with these settings?`}
+          confirmLabel="Re-run"
+          busy={runPipeline.isPending}
+          onCancel={() => setConfirmRerun(false)}
+          onConfirm={reRunWithSettings}
+        />
       )}
     </div>
   )
