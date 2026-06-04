@@ -122,6 +122,8 @@ export interface SeasonalSessionInfo {
   routes: string[]
   seasonStart: string
   seasonEnd: string
+  /** Optioneel: de config waarmee de sessie is gedraaid (voor auto-load in Settings). */
+  config?: SeasonalConfig
 }
 
 export interface SeasonalResults {

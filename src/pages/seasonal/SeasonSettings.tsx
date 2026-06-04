@@ -6,7 +6,7 @@
  * Defaults zijn voorlopig hardcoded (later via useSeasonalConfig). Types komen
  * uit @/types/seasonal.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DestinationConfig, SeasonalConfig } from '@/types/seasonal'
@@ -95,6 +95,23 @@ export function SeasonSettings() {
   const [activeDest, setActiveDest] = useState<string>(destinations[0] ?? '')
   const [month, setMonth] = useState<string>(ELASTICITY_MONTHS[0])
   const [confirmRerun, setConfirmRerun] = useState(false)
+  const [loadMsg, setLoadMsg] = useState('')
+  // Voorkomt dat de sessie-config de hardcoded defaults — of een handmatig
+  // geladen bestand — overschrijft nadat hij eenmaal is toegepast.
+  const sessionApplied = useRef(false)
+
+  // Auto-load: gebruik de config van de huidige sessie als default (i.p.v. de
+  // hardcoded defaults) zodra die binnenkomt.
+  useEffect(() => {
+    if (sessionApplied.current) return
+    if (!session?.config) return
+    sessionApplied.current = true
+    const cfg = clone(session.config)
+    setConfig(cfg)
+    const keys = Object.keys(cfg.destinations)
+    setActiveDest((prev) => (keys.includes(prev) ? prev : (keys[0] ?? prev)))
+    setLoadMsg('Config loaded from session')
+  }, [session])
 
   const dest = config.destinations[activeDest]
 
@@ -144,12 +161,17 @@ export function SeasonSettings() {
       try {
         const parsed = JSON.parse(String(reader.result)) as SeasonalConfig
         if (parsed && typeof parsed === 'object' && parsed.destinations) {
+          // Een handmatig geladen bestand wint van de sessie-config.
+          sessionApplied.current = true
           setConfig(parsed)
           const keys = Object.keys(parsed.destinations)
           if (keys.length > 0 && !keys.includes(activeDest)) setActiveDest(keys[0])
+          setLoadMsg(`Config loaded from ${file.name}`)
+        } else {
+          setLoadMsg('Invalid config file.')
         }
       } catch {
-        // Negeer ongeldige JSON — de huidige config blijft staan.
+        setLoadMsg('Could not read the config file.')
       }
     }
     reader.readAsText(file)
@@ -163,6 +185,9 @@ export function SeasonSettings() {
           <p className="font-body text-sm text-rm-gray">
             Configuration per destination. Changes stay local until you export.
           </p>
+          {loadMsg && (
+            <p className="mt-0.5 font-body text-xs text-es-blue">{loadMsg}</p>
+          )}
         </div>
         <div className="flex gap-2">
           <label className="cursor-pointer rounded-md border border-rm-border px-4 py-2 font-display text-sm font-medium text-rm-gray hover:bg-rm-gray-light">
@@ -196,7 +221,10 @@ export function SeasonSettings() {
           </button>
           <button
             type="button"
-            onClick={() => setConfig(clone(DEFAULT_CONFIG))}
+            onClick={() => {
+              setConfig(clone(DEFAULT_CONFIG))
+              setLoadMsg('')
+            }}
             className="rounded-md border border-rm-border px-4 py-2 font-display text-sm font-medium text-rm-gray hover:bg-rm-gray-light"
           >
             Reset
