@@ -101,14 +101,20 @@ export function SeasonSettings() {
   const sessionApplied = useRef(false)
 
   // Auto-load: gebruik de config van de huidige sessie als default (i.p.v. de
-  // hardcoded defaults) zodra die binnenkomt.
+  // hardcoded defaults) zodra die binnenkomt. Alleen het destinations-formaat
+  // (van Export/Load Config) mag overschrijven; het pipeline-formaat
+  // ({constraints, routes}) negeren we → defaults blijven staan.
   useEffect(() => {
     if (sessionApplied.current) return
-    if (!session?.config) return
+    const cfg = session?.config
+    if (!cfg) return // nog geen config → wachten
     sessionApplied.current = true
-    const cfg = clone(session.config)
-    setConfig(cfg)
-    const keys = Object.keys(cfg.destinations)
+    if (typeof cfg !== 'object' || !cfg.destinations || typeof cfg.destinations !== 'object') {
+      return // pipeline-formaat of ongeldig → val terug op hardcoded defaults
+    }
+    const loaded = clone(cfg)
+    setConfig(loaded)
+    const keys = Object.keys(loaded.destinations)
     setActiveDest((prev) => (keys.includes(prev) ? prev : (keys[0] ?? prev)))
     setLoadMsg('Config loaded from session')
   }, [session])
