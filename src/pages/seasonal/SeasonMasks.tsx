@@ -32,8 +32,18 @@ export function SeasonMasks() {
   if (query.isError) {
     return <ErrorState title="Could not load seasonal data" message={query.error.message} />
   }
+  // Geen enkel resultaat → vraag om eerst een seizoen aan te maken.
+  if (query.data.targets.length === 0 && query.data.masks.length === 0) {
+    return <NoSeasonData message="No season data yet." />
+  }
+  // Wél targets maar geen masks: dat is een data-issue, geen "maak een seizoen".
+  // Log de response zodat we zien wat de API teruggeeft (camelCase rbd/fare/…).
   if (query.data.masks.length === 0) {
-    return <NoSeasonData message="No masks yet." />
+    console.warn(
+      '[SeasonMasks] masks array is empty while targets exist — check the API response shape:',
+      query.data,
+    )
+    return <EmptyState message="No masks available for this season." />
   }
 
   return <MasksView masks={query.data.masks} />

@@ -39,6 +39,8 @@ export interface SeasonalTarget {
   pyYield: number
   pyRevenue: number
   pyLf: number
+  /** Optioneel: PY-capaciteit. Afwezig → afgeleid uit pyUnitsSold / pyLf. */
+  pyCapacity?: number
   pyGapFill: GapFillMethod
   pyMatchMethod: 'dow' | 'nearest'
 }
