@@ -9,6 +9,7 @@
  * FilterBar is gebonden aan het displacement-datamodel en hier niet herbruikbaar.
  */
 import { useMemo, useState } from 'react'
+import * as XLSX from 'xlsx'
 import type { SeasonalTarget } from '@/types/seasonal'
 import { useSeasonalResults } from '@/hooks/useSeasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
@@ -98,6 +99,34 @@ function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
     [targets, route, cabin, month],
   )
 
+  function exportExcel() {
+    // Detail: zelfde sortering als de tabel; respecteert de actieve filters.
+    const detail = [...filtered].sort(
+      (a, b) =>
+        a.departureDate.localeCompare(b.departureDate) ||
+        a.market.localeCompare(b.market) ||
+        cabinRank(a.modelCabin) - cabinRank(b.modelCabin),
+    )
+    const targetRows = detail.map((t) => ({
+      Date: t.departureDate,
+      DOW: dow(t.departureDate),
+      Route: t.market,
+      Cabin: CABIN_LABELS[t.modelCabin] ?? t.modelCabin,
+      ...indexColumns(rowFromTarget(t)),
+    }))
+
+    const byRoute = aggregate(filtered, (t) => t.market)
+    const summaryRows = [...byRoute.keys()]
+      .sort()
+      .map((market) => ({ Route: market, ...indexColumns(rowFromAgg(byRoute.get(market)!)) }))
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(targetRows), 'Targets')
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Summary')
+    const today = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(wb, `seasonal_targets_${today}.xlsx`)
+  }
+
   return (
     <div className="space-y-6 p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -123,6 +152,14 @@ function TargetsView({ targets }: { targets: SeasonalTarget[] }) {
             options={months}
             render={monthLabel}
           />
+          <button
+            type="button"
+            onClick={exportExcel}
+            disabled={filtered.length === 0}
+            className="rounded-md bg-es-blue px-4 py-2 font-display text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Export to Excel
+          </button>
         </div>
       </header>
 
@@ -275,6 +312,31 @@ function rowFromTarget(t: SeasonalTarget): IndexRow {
     pyRev: t.pyRevenue,
     cyRau: t.capacity > 0 ? t.targetRevenue / t.capacity : 0,
     pyRau: pyRauDenom > 0 ? t.pyRevenue / pyRauDenom : 0,
+  }
+}
+
+/** Index-kolommen (CY/PY/Idx) als platte object voor Excel-export. */
+function indexColumns(r: IndexRow): Record<string, number | string> {
+  const idx = (cy: number, py: number): number | string => {
+    const v = index(cy, py)
+    return v === null ? '' : Math.round(v)
+  }
+  return {
+    'CY Cap': Math.round(r.cap),
+    'PY Cap': Math.round(r.pyCap),
+    'Cap Idx': idx(r.cap, r.pyCap),
+    'CY Units': Math.round(r.units),
+    'PY Units': Math.round(r.pyUnits),
+    'Units Idx': idx(r.units, r.pyUnits),
+    'CY Yield': Math.round(r.cyYield),
+    'PY Yield': Math.round(r.pyYield),
+    'Yield Idx': idx(r.cyYield, r.pyYield),
+    'CY Rev': Math.round(r.rev),
+    'PY Rev': Math.round(r.pyRev),
+    'Rev Idx': idx(r.rev, r.pyRev),
+    'CY RAU': Math.round(r.cyRau),
+    'PY RAU': Math.round(r.pyRau),
+    'RAU Idx': idx(r.cyRau, r.pyRau),
   }
 }
 
