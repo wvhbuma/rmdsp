@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { DestinationConfig, SeasonalConfig } from '@/types/seasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { ROUTE_CONFIG } from '@/config/routes'
-import { useRunPipeline, useSeasonalResults } from '@/hooks/useSeasonal'
+import { useRunPipeline, useSaveConfig, useSeasonalResults } from '@/hooks/useSeasonal'
 import { DestinationTabs } from '@/components/seasonal/DestinationTabs'
 import { NumberInput } from '@/components/seasonal/NumberInput'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
@@ -88,6 +88,7 @@ export function SeasonSettings() {
   const queryClient = useQueryClient()
   const results = useSeasonalResults()
   const runPipeline = useRunPipeline()
+  const saveConfigMutation = useSaveConfig()
   const session = results.data?._session
 
   const [config, setConfig] = useState<SeasonalConfig>(() => clone(DEFAULT_CONFIG))
@@ -96,9 +97,37 @@ export function SeasonSettings() {
   const [month, setMonth] = useState<string>(ELASTICITY_MONTHS[0])
   const [confirmRerun, setConfirmRerun] = useState(false)
   const [loadMsg, setLoadMsg] = useState('')
+  // Snapshot van de laatst op de server opgeslagen config (JSON), om "dirty" te
+  // bepalen. Initieel = de defaults (== beginstate van editConfig).
+  const [savedSnapshot, setSavedSnapshot] = useState<string>(() =>
+    JSON.stringify(DEFAULT_CONFIG),
+  )
+  const [savedFlash, setSavedFlash] = useState(false)
+  const flashTimer = useRef<number | null>(null)
   // Voorkomt dat de sessie-config de hardcoded defaults — of een handmatig
   // geladen bestand — overschrijft nadat hij eenmaal is toegepast.
   const sessionApplied = useRef(false)
+
+  const dirty = JSON.stringify(config) !== savedSnapshot
+
+  useEffect(
+    () => () => {
+      if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
+    },
+    [],
+  )
+
+  function handleSave() {
+    saveConfigMutation.mutate(config, {
+      onSuccess: () => {
+        setSavedSnapshot(JSON.stringify(config))
+        setLoadMsg('Config saved')
+        setSavedFlash(true)
+        if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
+        flashTimer.current = window.setTimeout(() => setSavedFlash(false), 2000)
+      },
+    })
+  }
 
   // Auto-load: gebruik de config van de huidige sessie als default (i.p.v. de
   // hardcoded defaults) zodra die binnenkomt. Alleen het destinations-formaat
@@ -114,6 +143,8 @@ export function SeasonSettings() {
     }
     const loaded = clone(cfg)
     setConfig(loaded)
+    // De sessie-config is de huidige server-versie → snapshot bijwerken.
+    setSavedSnapshot(JSON.stringify(loaded))
     const keys = Object.keys(loaded.destinations)
     setActiveDest((prev) => (keys.includes(prev) ? prev : (keys[0] ?? prev)))
     setLoadMsg('Config loaded from session')
@@ -123,6 +154,11 @@ export function SeasonSettings() {
 
   function reRunWithSettings() {
     if (!session) return
+    console.log('Re-run config:', config)
+    // Sla de config ook op (los van de run), zodat de sessie 'm bewaart.
+    saveConfigMutation.mutate(config, {
+      onSuccess: () => setSavedSnapshot(JSON.stringify(config)),
+    })
     runPipeline.mutate(
       {
         name: session.name,
@@ -209,6 +245,18 @@ export function SeasonSettings() {
               }}
             />
           </label>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!dirty || saveConfigMutation.isPending}
+            className="rounded-md border border-es-blue px-4 py-2 font-display text-sm font-medium text-es-blue hover:bg-es-blue/5 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saveConfigMutation.isPending
+              ? 'Saving…'
+              : savedFlash
+                ? 'Saved ✓'
+                : 'Save config'}
+          </button>
           <button
             type="button"
             onClick={exportConfig}

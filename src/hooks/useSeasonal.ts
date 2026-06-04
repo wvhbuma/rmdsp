@@ -19,6 +19,7 @@ import type {
   PipelineResponse,
   ProductsResponse,
   RunPipelineArgs,
+  SeasonalConfig,
   SeasonalResults,
   SeasonalSession,
 } from '@/types/seasonal'
@@ -79,4 +80,8 @@ export function useImplement(): UseMutationResult<
   ImplementArgs
 > {
   return useMutation({ mutationFn: api.implementFares })
+}
+
+export function useSaveConfig(): UseMutationResult<void, Error, SeasonalConfig> {
+  return useMutation({ mutationFn: api.saveConfig })
 }

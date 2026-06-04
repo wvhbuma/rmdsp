@@ -16,6 +16,7 @@ import type {
   PipelineResponse,
   ProductsResponse,
   RunPipelineArgs,
+  SeasonalConfig,
   SeasonalResults,
   SeasonalSession,
 } from '@/types/seasonal'
@@ -80,6 +81,23 @@ export function runPipeline({
 
 export function fetchResults(signal?: AbortSignal): Promise<SeasonalResults> {
   return getJson<SeasonalResults>('/api/seasonal/results/latest', signal)
+}
+
+/*
+ * POST /api/seasonal/config
+ * Body: het volledige destinations-config object (SeasonalConfig). De Flask
+ * server slaat dit op in het Config-veld van de laatst actieve SeasonalSession.
+ * Geen response-payload nodig — we parsen de body daarom niet.
+ */
+export async function saveConfig(config: SeasonalConfig): Promise<void> {
+  const res = await fetch(`${BASE}/api/seasonal/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText} bij /api/seasonal/config`)
+  }
 }
 
 /** Bestaande seizoenen (Excel-bestanden in ~/Seasonal Planning/). */
