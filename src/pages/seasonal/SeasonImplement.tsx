@@ -9,7 +9,7 @@
  */
 import { useMemo, useState } from 'react'
 import type { ImplementResult, SeasonalResults } from '@/types/seasonal'
-import { useImplement, useSeasonalResults } from '@/hooks/useSeasonal'
+import { useImplement, useImplementStatus, useSeasonalResults } from '@/hooks/useSeasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatNumber } from '@/utils/format'
 import { KpiCard } from '@/components/displacement/KpiCard'
@@ -46,6 +46,8 @@ function ImplementView({ results }: { results: SeasonalResults }) {
   const [showConfirm, setShowConfirm] = useState(false)
 
   const implement = useImplement()
+  const status = useImplementStatus()
+  const keyConfigured = status.data?.keyConfigured === true
 
   const allRoutes = useMemo(
     () => [...new Set(results.targets.map((t) => t.market))].sort(),
@@ -167,6 +169,13 @@ function ImplementView({ results }: { results: SeasonalResults }) {
             browser.
           </p>
 
+          {!keyConfigured && !status.isPending && (
+            <p className="font-body text-xs text-status-warn">
+              No API key configured on the server — live push is disabled. Dry runs
+              still work.
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -187,7 +196,8 @@ function ImplementView({ results }: { results: SeasonalResults }) {
             <button
               type="button"
               onClick={() => setShowConfirm(true)}
-              disabled={!canSubmit || implement.isPending}
+              disabled={!canSubmit || implement.isPending || !keyConfigured}
+              title={keyConfigured ? undefined : 'API key not configured on server'}
               className="rounded-md bg-villain px-4 py-2 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               LIVE Push
@@ -301,7 +311,8 @@ function ResultArea({
   }
   if (!result) return null
 
-  const ok = result.status === 'ok'
+  const isDryRun = result.status === 'dry_run'
+  const ok = result.status !== 'error'
   return (
     <div className="space-y-2">
       <div
@@ -311,8 +322,11 @@ function ResultArea({
             : 'border-status-error/30 bg-status-error/5 text-status-error'
         }`}
       >
-        <span className="font-medium">{result.dryRun ? 'Dry run' : 'Live push'}:</span>{' '}
+        <span className="font-medium">{isDryRun ? 'Dry run' : 'Live push'}:</span>{' '}
         {result.pushed} pushed · {result.skipped} skipped
+        {isDryRun && result.products !== undefined && (
+          <> · {result.products} products · {result.fareItems ?? 0} fare items</>
+        )}
       </div>
       {result.log.length > 0 && <PushLog log={result.log} />}
     </div>

@@ -13,6 +13,7 @@ import type {
   DiscoverResponse,
   ImplementArgs,
   ImplementResult,
+  ImplementStatus,
   PipelineResponse,
   ProductsResponse,
   RunPipelineArgs,
@@ -112,16 +113,56 @@ export function fetchSessions(signal?: AbortSignal): Promise<SeasonalSession[]> 
 
 /*
  * De API key wordt NIET meegestuurd: de Flask server gebruikt de server-side
- * env var RAM_API_KEY.
+ * env var RAM_API_KEY. De body bevat alleen dry_run (snake_case) + optionele
+ * route/cabin-filters. Lege filters → de key valt weg uit de JSON (undefined),
+ * dus de server pusht dan alles.
+ *
+ * Wire-format van de respons is snake_case (status: 'dry_run' | 'ok' | 'error',
+ * fare_items); we mappen het naar de camelCase ImplementResult.
  */
-export function implementFares({
+interface ImplementResponseWire {
+  status: 'dry_run' | 'ok' | 'error'
+  pushed: number
+  skipped: number
+  log: string[]
+  products?: number
+  fare_items?: number
+}
+
+export async function implementFares({
   routes,
   cabins,
   dryRun = true,
 }: ImplementArgs): Promise<ImplementResult> {
-  return postJson<ImplementResult>('/api/seasonal/implement', {
+  const wire = await postJson<ImplementResponseWire>('/api/seasonal/implement', {
+    dry_run: dryRun,
     routes,
     cabins,
-    dry_run: dryRun,
   })
+  return {
+    status: wire.status,
+    pushed: wire.pushed,
+    skipped: wire.skipped,
+    log: wire.log,
+    products: wire.products,
+    fareItems: wire.fare_items,
+  }
+}
+
+/*
+ * GET /api/seasonal/implement/status → vertelt of de RAM API key server-side is
+ * ingesteld. Gebruikt om de LIVE Push-knop te disablen als er geen key is.
+ */
+interface ImplementStatusWire {
+  key_configured: boolean
+}
+
+export async function fetchImplementStatus(
+  signal?: AbortSignal,
+): Promise<ImplementStatus> {
+  const wire = await getJson<ImplementStatusWire>(
+    '/api/seasonal/implement/status',
+    signal,
+  )
+  return { keyConfigured: Boolean(wire.key_configured) }
 }

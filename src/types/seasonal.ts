@@ -199,11 +199,23 @@ export interface ImplementArgs {
 }
 
 export interface ImplementResult {
-  status: 'ok' | 'error'
-  dryRun: boolean
+  /** 'dry_run' = preview, 'ok' = live push geslaagd, 'error' = mislukt. */
+  status: 'dry_run' | 'ok' | 'error'
   pushed: number
   skipped: number
   log: string[]
+  /** Alleen bij dry-run aanwezig: aantal producten / fare-items in de selectie. */
+  products?: number
+  fareItems?: number
+}
+
+/**
+ * Server-side status van het implement-endpoint. keyConfigured geeft aan of de
+ * RAM API key (env RAM_API_KEY) op de Flask-server is ingesteld — zonder key is
+ * een live push niet mogelijk.
+ */
+export interface ImplementStatus {
+  keyConfigured: boolean
 }
 
 /** Een bestaand seizoen (Excel-bestand) zoals opgelijst door /api/seasonal/sessions. */
