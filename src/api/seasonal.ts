@@ -70,14 +70,18 @@ export function runPipeline({
   config,
   profileAssignments,
 }: RunPipelineArgs): Promise<PipelineResponse> {
-  return postJson<PipelineResponse>('/api/seasonal/run', {
+  const body = {
     name,
     routes,
     start,
     end,
     config,
     profile_assignments: profileAssignments,
-  })
+  }
+  // DEBUG: log de volledige request body — check of profile_assignments
+  // meegestuurd wordt en in welk format (date/market/profile).
+  console.log('Run pipeline body:', JSON.stringify(body))
+  return postJson<PipelineResponse>('/api/seasonal/run', body)
 }
 
 export function fetchResults(signal?: AbortSignal): Promise<SeasonalResults> {

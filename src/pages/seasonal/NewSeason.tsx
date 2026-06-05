@@ -128,6 +128,9 @@ export function NewSeason() {
       market: d.market,
       profile: profileOf(d),
     }))
+    // DEBUG: controleer of de toegekende profielen (bijv. "Low") correct in de
+    // assignments zitten vlak voor de pipeline-mutation.
+    console.log('Profile assignments:', JSON.stringify(profileAssignments))
     runPipeline.mutate({
       name: name.trim(),
       routes: selected,
