@@ -1,6 +1,6 @@
 /*
- * API-configuratie (RAM + Seasonal API endpoints + RAM API key), lokaal
- * opgeslagen in localStorage onder 'ram_api_config'.
+ * API-configuratie (RAM + Seasonal API endpoints + keys), lokaal opgeslagen in
+ * localStorage onder 'ram_api_config'.
  *
  * Bewust client-side: de RAM API key wordt bij een LIVE push in de request body
  * meegestuurd (zie src/api/seasonal.ts). De key staat dus alléén in deze browser,
@@ -20,6 +20,8 @@ export interface ApiConfig {
   ramApiUrl: string
   ramApiKey: string
   seasonalApiUrl: string
+  /** Voor later gebruik (Fare Recommender Azure Function). */
+  functionKey: string
 }
 
 const STORAGE_KEY = 'ram_api_config'
@@ -28,6 +30,7 @@ const DEFAULT_CONFIG: ApiConfig = {
   ramApiUrl: 'https://ram-api-es-prd.azurewebsites.net',
   ramApiKey: '',
   seasonalApiUrl: SEASONAL_API_BASE_URL ?? 'http://localhost:5050',
+  functionKey: '',
 }
 
 function isValidConfig(value: unknown): boolean {
@@ -36,7 +39,8 @@ function isValidConfig(value: unknown): boolean {
   return (
     typeof v.ramApiUrl === 'string' &&
     typeof v.ramApiKey === 'string' &&
-    typeof v.seasonalApiUrl === 'string'
+    typeof v.seasonalApiUrl === 'string' &&
+    typeof v.functionKey === 'string'
   )
 }
 
@@ -46,29 +50,18 @@ const configStore = createPersistentStore<ApiConfig>(
   isValidConfig,
 )
 
-/** Niet-reactieve lezer (bv. buiten React, of in event-handlers). */
-export function getApiConfig(): ApiConfig {
-  return configStore.get()
-}
-
-export function setApiConfig(config: ApiConfig): void {
-  configStore.set(config)
-}
-
-/** De geconfigureerde RAM API key, of null als die (nog) leeg is. */
-export function getRamApiKey(): string | null {
-  const key = configStore.get().ramApiKey.trim()
-  return key === '' ? null : key
-}
-
 export interface UseApiConfig {
-  config: ApiConfig
+  getConfig: () => ApiConfig
   setConfig: (config: ApiConfig) => void
+  /** true zodra de RAM API key niet leeg is. */
+  hasApiKey: () => boolean
 }
 
-/** Reactieve hook: leest de config en her-rendert bij wijziging. */
+/** Reactieve hook: her-rendert bij elke wijziging van de config-store. */
 export function useApiConfig(): UseApiConfig {
   const config = usePersistentStore(configStore)
+  const getConfig = useCallback(() => config, [config])
   const setConfig = useCallback((next: ApiConfig) => configStore.set(next), [])
-  return { config, setConfig }
+  const hasApiKey = useCallback(() => config.ramApiKey.trim() !== '', [config])
+  return { getConfig, setConfig, hasApiKey }
 }

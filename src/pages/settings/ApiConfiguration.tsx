@@ -1,5 +1,5 @@
 /*
- * API Configuration — beheert de RAM/Seasonal API endpoints + de RAM API key.
+ * API Configuration — beheert de RAM/Seasonal API endpoints + keys.
  * Opgeslagen in localStorage ('ram_api_config') via useApiConfig.
  *
  * De RAM API key wordt hier ingevuld en bij een LIVE push meegestuurd in de
@@ -17,8 +17,8 @@ type TestState =
   | { state: 'error'; message: string }
 
 export function ApiConfiguration() {
-  const { config, setConfig } = useApiConfig()
-  const [form, setForm] = useState<ApiConfig>(config)
+  const { getConfig, setConfig } = useApiConfig()
+  const [form, setForm] = useState<ApiConfig>(getConfig())
   const [saved, setSaved] = useState(false)
   const [test, setTest] = useState<TestState>({ state: 'idle' })
 
@@ -32,6 +32,7 @@ export function ApiConfiguration() {
       ramApiUrl: form.ramApiUrl.trim(),
       ramApiKey: form.ramApiKey,
       seasonalApiUrl: form.seasonalApiUrl.trim(),
+      functionKey: form.functionKey,
     })
     setSaved(true)
   }
@@ -58,9 +59,15 @@ export function ApiConfiguration() {
           API Configuration
         </h1>
         <p className="font-body text-sm text-rm-gray">
-          Endpoints and the RAM API key, stored locally in this browser.
+          Endpoints and keys, stored locally in this browser.
         </p>
       </header>
+
+      {saved && (
+        <div className="rounded-md border border-status-ok/30 bg-status-ok/5 px-4 py-2 font-body text-sm text-rm-dark">
+          Configuration saved ✓
+        </div>
+      )}
 
       <section className="space-y-4 rounded-lg border border-rm-border bg-rm-surface p-5">
         <Field label="RAM API URL">
@@ -73,21 +80,14 @@ export function ApiConfiguration() {
           />
         </Field>
 
-        <Field
+        <PasswordField
           label="RAM API Key"
           hint="Sent in the request body on a live push only — never on a dry run."
-        >
-          <input
-            type="password"
-            value={form.ramApiKey}
-            onChange={(e) => update('ramApiKey', e.target.value)}
-            autoComplete="off"
-            placeholder="••••••••"
-            className="w-full rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
-          />
-        </Field>
+          value={form.ramApiKey}
+          onChange={(v) => update('ramApiKey', v)}
+        />
 
-        <Field label="Seasonal API URL">
+        <Field label="Seasonal Planner API URL">
           <input
             type="text"
             value={form.seasonalApiUrl}
@@ -96,6 +96,13 @@ export function ApiConfiguration() {
             className="w-full rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
           />
         </Field>
+
+        <PasswordField
+          label="Function Key"
+          hint="For later use by the Fare Recommender."
+          value={form.functionKey}
+          onChange={(v) => update('functionKey', v)}
+        />
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <button
@@ -113,9 +120,6 @@ export function ApiConfiguration() {
           >
             {test.state === 'testing' ? 'Testing…' : 'Test connection'}
           </button>
-          {saved && (
-            <span className="font-body text-xs text-status-ok">Saved.</span>
-          )}
           {test.state === 'ok' && (
             <span className="font-body text-xs text-status-ok">{test.message}</span>
           )}
@@ -147,5 +151,40 @@ function Field({
       {children}
       {hint && <span className="mt-1 block font-body text-xs text-rm-gray">{hint}</span>}
     </label>
+  )
+}
+
+function PasswordField({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string
+  hint?: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [show, setShow] = useState(false)
+  return (
+    <Field label={label} hint={hint}>
+      <div className="relative">
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete="off"
+          placeholder="••••••••"
+          className="w-full rounded-md border border-rm-border bg-rm-surface px-3 py-2 pr-16 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          className="absolute inset-y-0 right-0 px-3 font-display text-xs font-medium text-es-blue hover:underline"
+        >
+          {show ? 'Hide' : 'Show'}
+        </button>
+      </div>
+    </Field>
   )
 }

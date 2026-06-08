@@ -47,9 +47,8 @@ function ImplementView({ results }: { results: SeasonalResults }) {
   const [showConfirm, setShowConfirm] = useState(false)
 
   const implement = useImplement()
-  const { config } = useApiConfig()
-  const apiKey = config.ramApiKey.trim()
-  const keyConfigured = apiKey !== ''
+  const { getConfig, hasApiKey } = useApiConfig()
+  const keyConfigured = hasApiKey()
 
   const allRoutes = useMemo(
     () => [...new Set(results.targets.map((t) => t.market))].sort(),
@@ -95,7 +94,7 @@ function ImplementView({ results }: { results: SeasonalResults }) {
 
   function runLivePush() {
     setShowConfirm(false)
-    implement.mutate({ ...mutationArgs, dryRun: false, apiKey })
+    implement.mutate({ ...mutationArgs, dryRun: false, apiKey: getConfig().ramApiKey })
   }
 
   function exportJson() {

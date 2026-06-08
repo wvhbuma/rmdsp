@@ -117,9 +117,8 @@ function TargetsView({
   // Push to RAM: zelfde route/cabin-selectie als de tabel. Month is geen
   // filter op het targets-endpoint en wordt hier dus niet meegestuurd.
   const push = usePushTargets()
-  const { config } = useApiConfig()
-  const apiKey = config.ramApiKey.trim()
-  const keyConfigured = apiKey !== ''
+  const { getConfig, hasApiKey } = useApiConfig()
+  const keyConfigured = hasApiKey()
   const [showConfirm, setShowConfirm] = useState(false)
 
   const pushArgs: ImplementArgs = {
@@ -133,7 +132,7 @@ function TargetsView({
 
   function runLivePush() {
     setShowConfirm(false)
-    push.mutate({ ...pushArgs, dryRun: false, apiKey })
+    push.mutate({ ...pushArgs, dryRun: false, apiKey: getConfig().ramApiKey })
   }
 
   function exportExcel() {
