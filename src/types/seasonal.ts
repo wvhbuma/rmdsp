@@ -189,13 +189,15 @@ export interface RunPipelineArgs {
 }
 
 /*
- * Geen apiKey hier: de RAM API key zit server-side (env RAM_API_KEY) en wordt
- * door het Flask implement-endpoint afgehandeld. De frontend stuurt 'm niet mee.
+ * apiKey wordt alléén bij een LIVE push meegestuurd (in de body als `api_key`),
+ * uit de client-side API Configuration (localStorage). Bij een dry-run blijft het
+ * leeg en wordt het niet meegestuurd.
  */
 export interface ImplementArgs {
   routes?: string[]
   cabins?: string[]
   dryRun?: boolean
+  apiKey?: string
 }
 
 export interface ImplementResult {
@@ -209,15 +211,6 @@ export interface ImplementResult {
   fareItems?: number
   /** Alleen bij een live targets-push: id van de push-batch. */
   batchId?: string
-}
-
-/**
- * Server-side status van het implement-endpoint. keyConfigured geeft aan of de
- * RAM API key (env RAM_API_KEY) op de Flask-server is ingesteld — zonder key is
- * een live push niet mogelijk.
- */
-export interface ImplementStatus {
-  keyConfigured: boolean
 }
 
 /** Een bestaand seizoen (Excel-bestand) zoals opgelijst door /api/seasonal/sessions. */

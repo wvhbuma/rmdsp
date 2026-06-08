@@ -141,6 +141,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Decision Log', path: '/decision-log', icon: 'check-square' },
       { label: 'Approval Rules', path: '/approval-rules', icon: 'check' },
       { label: 'User Preferences', path: '/settings/preferences', icon: 'sliders' },
+      { label: 'API Configuration', path: '/settings/api-configuration', icon: 'network' },
     ],
   },
 ]

@@ -9,7 +9,8 @@
  */
 import { useMemo, useState } from 'react'
 import type { ImplementResult, SeasonalResults } from '@/types/seasonal'
-import { useImplement, useImplementStatus, useSeasonalResults } from '@/hooks/useSeasonal'
+import { useImplement, useSeasonalResults } from '@/hooks/useSeasonal'
+import { useApiConfig } from '@/hooks/useApiConfig'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatNumber } from '@/utils/format'
 import { KpiCard } from '@/components/displacement/KpiCard'
@@ -46,8 +47,9 @@ function ImplementView({ results }: { results: SeasonalResults }) {
   const [showConfirm, setShowConfirm] = useState(false)
 
   const implement = useImplement()
-  const status = useImplementStatus()
-  const keyConfigured = status.data?.keyConfigured === true
+  const { config } = useApiConfig()
+  const apiKey = config.ramApiKey.trim()
+  const keyConfigured = apiKey !== ''
 
   const allRoutes = useMemo(
     () => [...new Set(results.targets.map((t) => t.market))].sort(),
@@ -93,7 +95,7 @@ function ImplementView({ results }: { results: SeasonalResults }) {
 
   function runLivePush() {
     setShowConfirm(false)
-    implement.mutate({ ...mutationArgs, dryRun: false })
+    implement.mutate({ ...mutationArgs, dryRun: false, apiKey })
   }
 
   function exportJson() {
@@ -127,7 +129,8 @@ function ImplementView({ results }: { results: SeasonalResults }) {
         <Icon name="alert-triangle" className="mt-0.5 h-5 w-5 shrink-0 text-status-warn" />
         <p className="font-body text-sm text-rm-dark">
           <span className="font-semibold">Warning:</span> a live push writes directly to
-          the RAM production API. The API key is handled server-side; run a dry-run first.
+          the RAM production API using the key from API Configuration. Run a dry-run
+          first.
         </p>
       </div>
 
@@ -165,14 +168,14 @@ function ImplementView({ results }: { results: SeasonalResults }) {
       <SectionCard title="Actions">
         <div className="space-y-4">
           <p className="font-body text-xs text-rm-gray">
-            The RAM API key is read server-side (RAM_API_KEY) — no key is sent from the
-            browser.
+            The RAM API key is sent from the browser on a live push only (from API
+            Configuration) — never on a dry run.
           </p>
 
-          {!keyConfigured && !status.isPending && (
+          {!keyConfigured && (
             <p className="font-body text-xs text-status-warn">
-              No API key configured on the server — live push is disabled. Dry runs
-              still work.
+              No API key configured — live push is disabled. Set it in Settings → API
+              Configuration. Dry runs still work.
             </p>
           )}
 
@@ -197,7 +200,11 @@ function ImplementView({ results }: { results: SeasonalResults }) {
               type="button"
               onClick={() => setShowConfirm(true)}
               disabled={!canSubmit || implement.isPending || !keyConfigured}
-              title={keyConfigured ? undefined : 'API key not configured on server'}
+              title={
+                keyConfigured
+                  ? undefined
+                  : 'Configure API key in Settings → API Configuration'
+              }
               className="rounded-md bg-villain px-4 py-2 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               LIVE Push

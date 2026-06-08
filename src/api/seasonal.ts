@@ -13,7 +13,6 @@ import type {
   DiscoverResponse,
   ImplementArgs,
   ImplementResult,
-  ImplementStatus,
   PipelineResponse,
   ProductsResponse,
   RunPipelineArgs,
@@ -142,10 +141,15 @@ export function fetchSessions(signal?: AbortSignal): Promise<SeasonalSession[]> 
 }
 
 /*
- * De API key wordt NIET meegestuurd: de Flask server gebruikt de server-side
- * env var RAM_API_KEY. De body bevat alleen dry_run (snake_case) + optionele
- * route/cabin-filters. Lege filters → de key valt weg uit de JSON (undefined),
- * dus de server pusht dan alles.
+ * De RAM API key komt nu uit de client-side API Configuration (localStorage) en
+ * wordt alléén bij een LIVE push als `api_key` in de body meegestuurd; bij een
+ * dry-run is apiKey leeg en valt het veld weg uit de JSON. De body bevat verder
+ * dry_run (snake_case) + optionele route/cabin-filters (lege filters → de server
+ * pusht alles).
+ *
+ * BACKEND: het Flask-endpoint moet de body-key als fallback accepteren wanneer de
+ * env-var niet gezet is:
+ *     api_key = os.environ.get("RAM_API_KEY", "") or data.get("api_key", "")
  *
  * Wire-format van de respons is snake_case (status: 'dry_run' | 'ok' | 'error',
  * fare_items); we mappen het naar de camelCase ImplementResult.
@@ -163,11 +167,13 @@ export async function implementFares({
   routes,
   cabins,
   dryRun = true,
+  apiKey,
 }: ImplementArgs): Promise<ImplementResult> {
   const wire = await postJson<ImplementResponseWire>('/api/seasonal/implement', {
     dry_run: dryRun,
     routes,
     cabins,
+    api_key: apiKey,
   })
   return {
     status: wire.status,
@@ -181,8 +187,11 @@ export async function implementFares({
 
 /*
  * POST /api/seasonal/implement/targets → dry-runt of pusht de berekende targets
- * naar RAM. Net als implementFares zit de API key server-side; de body bevat
- * alleen dry_run (snake_case) + optionele route/cabin-filters.
+ * naar RAM. Zelfde api_key-flow als implementFares: alleen bij een live push
+ * meegestuurd als `api_key`.
+ *
+ * BACKEND: idem — env-var met body-fallback:
+ *     api_key = os.environ.get("RAM_API_KEY", "") or data.get("api_key", "")
  *
  * Wire-format verschilt licht per modus: dry-run levert `products`, een live push
  * `pushed` + `batchId`. We mappen naar ImplementResult met 0-defaults zodat de
@@ -201,11 +210,13 @@ export async function pushTargets({
   routes,
   cabins,
   dryRun = true,
+  apiKey,
 }: ImplementArgs): Promise<ImplementResult> {
   const wire = await postJson<PushTargetsWire>('/api/seasonal/implement/targets', {
     dry_run: dryRun,
     routes,
     cabins,
+    api_key: apiKey,
   })
   return {
     status: wire.status,
@@ -215,22 +226,4 @@ export async function pushTargets({
     products: wire.products,
     batchId: wire.batchId,
   }
-}
-
-/*
- * GET /api/seasonal/implement/status → vertelt of de RAM API key server-side is
- * ingesteld. Gebruikt om de LIVE Push-knop te disablen als er geen key is.
- */
-interface ImplementStatusWire {
-  key_configured: boolean
-}
-
-export async function fetchImplementStatus(
-  signal?: AbortSignal,
-): Promise<ImplementStatus> {
-  const wire = await getJson<ImplementStatusWire>(
-    '/api/seasonal/implement/status',
-    signal,
-  )
-  return { keyConfigured: Boolean(wire.key_configured) }
 }

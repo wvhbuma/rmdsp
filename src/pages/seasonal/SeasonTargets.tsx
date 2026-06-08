@@ -17,11 +17,8 @@ import type {
   SeasonalSessionInfo,
   SeasonalTarget,
 } from '@/types/seasonal'
-import {
-  useImplementStatus,
-  usePushTargets,
-  useSeasonalResults,
-} from '@/hooks/useSeasonal'
+import { usePushTargets, useSeasonalResults } from '@/hooks/useSeasonal'
+import { useApiConfig } from '@/hooks/useApiConfig'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { SectionCard } from '@/components/displacement/SectionCard'
@@ -120,8 +117,9 @@ function TargetsView({
   // Push to RAM: zelfde route/cabin-selectie als de tabel. Month is geen
   // filter op het targets-endpoint en wordt hier dus niet meegestuurd.
   const push = usePushTargets()
-  const status = useImplementStatus()
-  const keyConfigured = status.data?.keyConfigured === true
+  const { config } = useApiConfig()
+  const apiKey = config.ramApiKey.trim()
+  const keyConfigured = apiKey !== ''
   const [showConfirm, setShowConfirm] = useState(false)
 
   const pushArgs: ImplementArgs = {
@@ -135,7 +133,7 @@ function TargetsView({
 
   function runLivePush() {
     setShowConfirm(false)
-    push.mutate({ ...pushArgs, dryRun: false })
+    push.mutate({ ...pushArgs, dryRun: false, apiKey })
   }
 
   function exportExcel() {
@@ -215,7 +213,11 @@ function TargetsView({
             type="button"
             onClick={() => setShowConfirm(true)}
             disabled={filtered.length === 0 || push.isPending || !keyConfigured}
-            title={keyConfigured ? undefined : 'API key not configured on server'}
+            title={
+              keyConfigured
+                ? undefined
+                : 'Configure API key in Settings → API Configuration'
+            }
             className="rounded-md bg-villain px-4 py-2 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Push Targets
@@ -228,7 +230,6 @@ function TargetsView({
         error={push.error}
         result={push.data}
         keyConfigured={keyConfigured}
-        statusPending={status.isPending}
       />
 
       <SectionCard title="Per route" subtitle="Summary of the current selection">
@@ -260,13 +261,11 @@ function PushResultArea({
   error,
   result,
   keyConfigured,
-  statusPending,
 }: {
   pending: boolean
   error: Error | null
   result: ImplementResult | undefined
   keyConfigured: boolean
-  statusPending: boolean
 }) {
   if (pending) {
     return (
@@ -286,12 +285,12 @@ function PushResultArea({
   }
   if (!result) {
     // Geen resultaat: alleen een hint tonen als de key ontbreekt.
-    if (keyConfigured || statusPending) return null
+    if (keyConfigured) return null
     return (
       <SectionCard title="Push to RAM">
         <p className="font-body text-xs text-status-warn">
-          No API key configured on the server — live push is disabled. Dry runs still
-          work.
+          No API key configured — live push is disabled. Set it in Settings → API
+          Configuration. Dry runs still work.
         </p>
       </SectionCard>
     )

@@ -17,7 +17,6 @@ import type {
   DiscoverResponse,
   ImplementArgs,
   ImplementResult,
-  ImplementStatus,
   PipelineResponse,
   ProductsResponse,
   RunPipelineArgs,
@@ -123,20 +122,6 @@ export function usePushTargets(): UseMutationResult<
   ImplementArgs
 > {
   return useMutation({ mutationFn: api.pushTargets })
-}
-
-/*
- * Of de RAM API key server-side gezet is. retry:false → een 404 (endpoint nog
- * niet aanwezig) faalt direct en we behandelen de key dan als niet-geconfigureerd,
- * zodat de LIVE Push-knop veiligheidshalve disabled blijft.
- */
-export function useImplementStatus(): UseQueryResult<ImplementStatus, Error> {
-  return useQuery({
-    queryKey: ['seasonal', 'implement', 'status'],
-    queryFn: ({ signal }) => api.fetchImplementStatus(signal),
-    staleTime: 60_000,
-    retry: false,
-  })
 }
 
 export function useSaveConfig(): UseMutationResult<void, Error, SeasonalConfig> {

@@ -26,6 +26,7 @@ import { DisplacementReporting } from '@/pages/displacement/DisplacementReportin
 import { DisplacementMonthly } from '@/pages/displacement/DisplacementMonthly'
 import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartures'
 import { UserPreferences } from '@/pages/settings/UserPreferences'
+import { ApiConfiguration } from '@/pages/settings/ApiConfiguration'
 import { NewSeason } from '@/pages/seasonal/NewSeason'
 import { SeasonOverview } from '@/pages/seasonal/SeasonOverview'
 import { SeasonTargets } from '@/pages/seasonal/SeasonTargets'
@@ -83,6 +84,7 @@ export function App() {
             <Route path="decision-log" element={<DecisionLog />} />
             <Route path="approval-rules" element={<ApprovalRules />} />
             <Route path="settings/preferences" element={<UserPreferences />} />
+            <Route path="settings/api-configuration" element={<ApiConfiguration />} />
 
             {/* 404 fallback */}
             <Route path="*" element={<NotFound />} />

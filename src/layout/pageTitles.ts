@@ -28,6 +28,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/decision-log': 'Decision Log',
   '/approval-rules': 'Approval Rules',
   '/settings/preferences': 'User Preferences',
+  '/settings/api-configuration': 'API Configuration',
   '/season/new': 'Season Planning — New Season',
   '/season/overview': 'Season Planning — Overview',
   '/season/targets': 'Season Planning — Targets',
