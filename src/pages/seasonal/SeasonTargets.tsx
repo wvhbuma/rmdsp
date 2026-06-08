@@ -11,12 +11,22 @@
  */
 import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
-import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
-import { useSeasonalResults } from '@/hooks/useSeasonal'
+import type {
+  ImplementArgs,
+  ImplementResult,
+  SeasonalSessionInfo,
+  SeasonalTarget,
+} from '@/types/seasonal'
+import {
+  useImplementStatus,
+  usePushTargets,
+  useSeasonalResults,
+} from '@/hooks/useSeasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { SectionCard } from '@/components/displacement/SectionCard'
 import { SessionBadge } from '@/components/seasonal/SessionBadge'
+import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import {
   EmptyState,
   ErrorState,
@@ -107,6 +117,27 @@ function TargetsView({
     [targets, route, cabin, month],
   )
 
+  // Push to RAM: zelfde route/cabin-selectie als de tabel. Month is geen
+  // filter op het targets-endpoint en wordt hier dus niet meegestuurd.
+  const push = usePushTargets()
+  const status = useImplementStatus()
+  const keyConfigured = status.data?.keyConfigured === true
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const pushArgs: ImplementArgs = {
+    routes: route !== ALL ? [route] : undefined,
+    cabins: cabin !== ALL ? [cabin] : undefined,
+  }
+
+  function runDryRun() {
+    push.mutate({ ...pushArgs, dryRun: true })
+  }
+
+  function runLivePush() {
+    setShowConfirm(false)
+    push.mutate({ ...pushArgs, dryRun: false })
+  }
+
   function exportExcel() {
     // Detail: zelfde sortering als de tabel; respecteert de actieve filters.
     const detail = [...filtered].sort(
@@ -172,8 +203,33 @@ function TargetsView({
           >
             Export to Excel
           </button>
+          <button
+            type="button"
+            onClick={runDryRun}
+            disabled={filtered.length === 0 || push.isPending}
+            className="rounded-md border border-es-blue px-4 py-2 font-display text-sm font-medium text-es-blue transition-colors hover:bg-es-blue/5 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Dry Run Targets
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            disabled={filtered.length === 0 || push.isPending || !keyConfigured}
+            title={keyConfigured ? undefined : 'API key not configured on server'}
+            className="rounded-md bg-villain px-4 py-2 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Push Targets
+          </button>
         </div>
       </header>
+
+      <PushResultArea
+        pending={push.isPending}
+        error={push.error}
+        result={push.data}
+        keyConfigured={keyConfigured}
+        statusPending={status.isPending}
+      />
 
       <SectionCard title="Per route" subtitle="Summary of the current selection">
         <RouteSummaryTable targets={filtered} />
@@ -182,6 +238,102 @@ function TargetsView({
       <SectionCard title="Departure detail" subtitle={`${filtered.length} departures × cabin`}>
         {filtered.length === 0 ? <EmptyState /> : <DetailTable targets={filtered} />}
       </SectionCard>
+
+      {showConfirm && (
+        <ConfirmDialog
+          title="Push targets to RAM"
+          message={`Push ${filtered.length} targets to RAM production?`}
+          confirmLabel="Push to production"
+          busy={push.isPending}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={runLivePush}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── Push to RAM: resultaat + log ───────────────────────────────────────── */
+
+function PushResultArea({
+  pending,
+  error,
+  result,
+  keyConfigured,
+  statusPending,
+}: {
+  pending: boolean
+  error: Error | null
+  result: ImplementResult | undefined
+  keyConfigured: boolean
+  statusPending: boolean
+}) {
+  if (pending) {
+    return (
+      <SectionCard title="Push to RAM">
+        <LoadingState label="Pushing targets…" />
+      </SectionCard>
+    )
+  }
+  if (error) {
+    return (
+      <SectionCard title="Push to RAM">
+        <div className="rounded-md border border-status-error/30 bg-status-error/5 px-3 py-2 font-body text-sm text-status-error">
+          {error.message}
+        </div>
+      </SectionCard>
+    )
+  }
+  if (!result) {
+    // Geen resultaat: alleen een hint tonen als de key ontbreekt.
+    if (keyConfigured || statusPending) return null
+    return (
+      <SectionCard title="Push to RAM">
+        <p className="font-body text-xs text-status-warn">
+          No API key configured on the server — live push is disabled. Dry runs still
+          work.
+        </p>
+      </SectionCard>
+    )
+  }
+
+  const isDryRun = result.status === 'dry_run'
+  const ok = result.status !== 'error'
+  return (
+    <SectionCard title="Push to RAM">
+      <div className="space-y-2">
+        <div
+          className={`rounded-md border px-3 py-2 font-body text-sm ${
+            ok
+              ? 'border-status-ok/30 bg-status-ok/5 text-rm-dark'
+              : 'border-status-error/30 bg-status-error/5 text-status-error'
+          }`}
+        >
+          <span className="font-medium">{isDryRun ? 'Dry run' : 'Push'}:</span>{' '}
+          {isDryRun
+            ? `${result.products ?? 0} targets`
+            : `${result.pushed} pushed${result.batchId ? ` · batch ${result.batchId}` : ''}`}
+        </div>
+        {result.log.length > 0 && <PushLog log={result.log} />}
+      </div>
+    </SectionCard>
+  )
+}
+
+function PushLog({ log }: { log: string[] }) {
+  return (
+    <div className="max-h-64 overflow-y-auto rounded-md border border-rm-border bg-rm-bg p-2 font-mono text-xs">
+      {log.map((line, i) => {
+        const isError = line.startsWith('❌') || /error|fail/i.test(line)
+        return (
+          <div
+            key={i}
+            className={`px-1 py-0.5 ${isError ? 'text-status-error' : 'text-rm-dark'}`}
+          >
+            {line}
+          </div>
+        )
+      })}
     </div>
   )
 }

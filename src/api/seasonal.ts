@@ -180,6 +180,44 @@ export async function implementFares({
 }
 
 /*
+ * POST /api/seasonal/implement/targets → dry-runt of pusht de berekende targets
+ * naar RAM. Net als implementFares zit de API key server-side; de body bevat
+ * alleen dry_run (snake_case) + optionele route/cabin-filters.
+ *
+ * Wire-format verschilt licht per modus: dry-run levert `products`, een live push
+ * `pushed` + `batchId`. We mappen naar ImplementResult met 0-defaults zodat de
+ * verplichte velden altijd gevuld zijn.
+ */
+interface PushTargetsWire {
+  status: 'dry_run' | 'ok' | 'error'
+  pushed?: number
+  skipped?: number
+  products?: number
+  batchId?: string
+  log?: string[]
+}
+
+export async function pushTargets({
+  routes,
+  cabins,
+  dryRun = true,
+}: ImplementArgs): Promise<ImplementResult> {
+  const wire = await postJson<PushTargetsWire>('/api/seasonal/implement/targets', {
+    dry_run: dryRun,
+    routes,
+    cabins,
+  })
+  return {
+    status: wire.status,
+    pushed: wire.pushed ?? 0,
+    skipped: wire.skipped ?? 0,
+    log: wire.log ?? [],
+    products: wire.products,
+    batchId: wire.batchId,
+  }
+}
+
+/*
  * GET /api/seasonal/implement/status → vertelt of de RAM API key server-side is
  * ingesteld. Gebruikt om de LIVE Push-knop te disablen als er geen key is.
  */

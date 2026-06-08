@@ -117,6 +117,14 @@ export function useImplement(): UseMutationResult<
   return useMutation({ mutationFn: api.implementFares })
 }
 
+export function usePushTargets(): UseMutationResult<
+  ImplementResult,
+  Error,
+  ImplementArgs
+> {
+  return useMutation({ mutationFn: api.pushTargets })
+}
+
 /*
  * Of de RAM API key server-side gezet is. retry:false → een 404 (endpoint nog
  * niet aanwezig) faalt direct en we behandelen de key dan als niet-geconfigureerd,

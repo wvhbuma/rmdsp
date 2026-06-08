@@ -207,6 +207,8 @@ export interface ImplementResult {
   /** Alleen bij dry-run aanwezig: aantal producten / fare-items in de selectie. */
   products?: number
   fareItems?: number
+  /** Alleen bij een live targets-push: id van de push-batch. */
+  batchId?: string
 }
 
 /**
