@@ -4,7 +4,10 @@
  * Alle velden behalve naam zijn optioneel — ontbrekende delen worden weggelaten
  * (graceful fallback voor oudere API-responses). Status is een gekleurde badge.
  */
+import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import type { SeasonalSessionInfo } from '@/types/seasonal'
+import { useActiveSession } from '@/hooks/useActiveSession'
 
 const STATUS_CLASS: Record<string, string> = {
   draft: 'bg-rm-gray',
@@ -32,6 +35,17 @@ function formatCreatedAt(raw?: string): string {
 }
 
 export function SessionBadge({ session }: { session: SeasonalSessionInfo }) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { getActiveSession, clearActiveSession } = useActiveSession()
+  const hasActiveSession = getActiveSession() !== null
+
+  function resetToLatest() {
+    clearActiveSession()
+    void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+    navigate('/season/overview')
+  }
+
   const parts: string[] = []
   if (session.name) parts.push(session.name)
   if (session.id !== undefined && session.id !== null && session.id !== '') {
@@ -54,6 +68,16 @@ export function SessionBadge({ session }: { session: SeasonalSessionInfo }) {
         >
           {session.status}
         </span>
+      )}
+      {hasActiveSession && (
+        <button
+          type="button"
+          onClick={resetToLatest}
+          title="Reset to the latest computed season"
+          className="font-display text-xs font-medium text-es-blue hover:underline"
+        >
+          Reset to latest ✕
+        </button>
       )}
     </div>
   )

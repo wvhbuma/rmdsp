@@ -10,8 +10,10 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { EChartsCoreOption } from 'echarts/core'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
 import { useRunPipeline, useSeasonalResults } from '@/hooks/useSeasonal'
+import { useActiveSession } from '@/hooks/useActiveSession'
 import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import { SessionBadge } from '@/components/seasonal/SessionBadge'
 import { CABIN_COLORS, CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
@@ -46,6 +48,8 @@ export function SeasonOverview() {
 
 function ReRunPipeline({ session }: { session?: SeasonalSessionInfo }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { clearActiveSession } = useActiveSession()
   const runPipeline = useRunPipeline()
   const [confirm, setConfirm] = useState(false)
 
@@ -61,8 +65,11 @@ function ReRunPipeline({ session }: { session?: SeasonalSessionInfo }) {
       {
         onSuccess: () => {
           setConfirm(false)
-          // Nieuwe resultaten ophalen.
+          // De re-run is nu /results/latest. Wis de active-session en strip de
+          // ?session= param zodat de pagina de verse latest-resultaten toont.
+          clearActiveSession()
           void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+          navigate('/season/overview')
         },
       },
     )

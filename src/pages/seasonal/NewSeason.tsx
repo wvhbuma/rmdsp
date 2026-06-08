@@ -15,6 +15,7 @@ import {
   useSeasonalProducts,
   useSeasonalSessions,
 } from '@/hooks/useSeasonal'
+import { useActiveSession } from '@/hooks/useActiveSession'
 import type {
   DiscoverResponse,
   PipelineSummary,
@@ -80,6 +81,7 @@ function monthLabel(date: string): string {
 export function NewSeason() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { setActiveSession, clearActiveSession } = useActiveSession()
 
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
@@ -144,17 +146,20 @@ export function NewSeason() {
       },
       {
         onSuccess: () => {
-          // Verse resultaten: laat o.a. Season Overview en (Budget &) Targets
-          // de nieuwe sessie herladen i.p.v. de gecachete vorige.
+          // Een nieuwe run wordt /results/latest. De pipeline-respons bevat geen
+          // session-id, dus we wissen de active-session → pagina's vallen terug op
+          // latest (= deze run) i.p.v. een eerder geladen seizoen.
+          clearActiveSession()
           void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
         },
       },
     )
   }
 
-  // Open een bestaand seizoen: zet ?session=<id> zodat alle season-pagina's die
-  // sessie tonen (useSeasonalResults pakt de param op) en herlaad de cache.
+  // Open een bestaand seizoen: persisteer de active-session (overleeft sidebar-
+  // navigatie) en zet ?session=<id> zodat de pagina's die sessie tonen.
   function loadSeason(sessionId: number) {
+    setActiveSession(sessionId)
     void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
     navigate(`/season/overview?session=${sessionId}`)
   }

@@ -5,6 +5,7 @@
  * - useSeasonalResults: query op de laatst berekende resultaten
  * - useRunPipeline / useImplement: mutations (pipeline draaien / fares pushen)
  */
+import { useEffect } from 'react'
 import {
   useMutation,
   useQuery,
@@ -13,6 +14,7 @@ import {
 } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import * as api from '@/api/seasonal'
+import { useActiveSession } from '@/hooks/useActiveSession'
 import type {
   DiscoverResponse,
   ImplementArgs,
@@ -59,13 +61,23 @@ function sessionIdFromParam(raw: string | null): number | null {
 }
 
 /*
- * Resultaten voor de actieve seizoen-context: zonder ?session= param de laatst
- * berekende sessie (/results/latest), met ?session=<id> die specifieke sessie.
+ * Resultaten voor de actieve seizoen-context. Bron-prioriteit:
+ *   1) ?session=<id> URL-param  → die sessie, én persisteren in localStorage
+ *   2) localStorage active-session → blijft hangen bij sidebar-navigatie
+ *   3) geen van beide            → /results/latest
  * Eén useQuery met een dynamische key/fn — geen voorwaardelijke hook-calls.
  */
 export function useSeasonalResults(): UseQueryResult<SeasonalResults, Error> {
   const [searchParams] = useSearchParams()
-  const sessionId = sessionIdFromParam(searchParams.get('session'))
+  const { getActiveSession, setActiveSession } = useActiveSession()
+
+  const urlSessionId = sessionIdFromParam(searchParams.get('session'))
+  const sessionId = urlSessionId ?? getActiveSession()
+
+  // Een sessie uit de URL wordt de nieuwe active-session (overleeft sidebar-nav).
+  useEffect(() => {
+    if (urlSessionId !== null) setActiveSession(urlSessionId)
+  }, [urlSessionId, setActiveSession])
 
   return useQuery({
     queryKey:
