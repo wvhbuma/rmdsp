@@ -55,7 +55,9 @@ export function useSeasonalResults(): UseQueryResult<SeasonalResults, Error> {
   return useQuery({
     queryKey: ['seasonal', 'results'],
     queryFn: ({ signal }) => api.fetchResults(signal),
-    staleTime: 60_000,
+    // Kort: na een seizoenwissel / pipeline-run snel verse data tonen op
+    // pagina's die op de achtergrond gecachet stonden (Budget & Targets etc.).
+    staleTime: 10_000,
   })
 }
 

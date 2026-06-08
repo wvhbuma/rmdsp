@@ -30,6 +30,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/settings/preferences': 'User Preferences',
   '/season/new': 'Season Planning — New Season',
   '/season/overview': 'Season Planning — Overview',
+  '/season/targets': 'Season Planning — Targets',
   '/season/masks': 'Season Planning — Masks',
   '/season/simulation': 'Season Planning — Simulation',
   '/season/implement': 'Season Planning — Implementation',

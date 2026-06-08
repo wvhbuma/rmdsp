@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import {
   useDiscoverRoutes,
@@ -77,6 +78,7 @@ function monthLabel(date: string): string {
 
 export function NewSeason() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
@@ -131,13 +133,22 @@ export function NewSeason() {
     // DEBUG: controleer of de toegekende profielen (bijv. "Low") correct in de
     // assignments zitten vlak voor de pipeline-mutation.
     console.log('Profile assignments:', JSON.stringify(profileAssignments))
-    runPipeline.mutate({
-      name: name.trim(),
-      routes: selected,
-      start: search.start,
-      end: search.end,
-      profileAssignments,
-    })
+    runPipeline.mutate(
+      {
+        name: name.trim(),
+        routes: selected,
+        start: search.start,
+        end: search.end,
+        profileAssignments,
+      },
+      {
+        onSuccess: () => {
+          // Verse resultaten: laat o.a. Season Overview en (Budget &) Targets
+          // de nieuwe sessie herladen i.p.v. de gecachete vorige.
+          void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+        },
+      },
+    )
   }
 
   return (

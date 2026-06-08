@@ -28,6 +28,7 @@ import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartu
 import { UserPreferences } from '@/pages/settings/UserPreferences'
 import { NewSeason } from '@/pages/seasonal/NewSeason'
 import { SeasonOverview } from '@/pages/seasonal/SeasonOverview'
+import { SeasonTargets } from '@/pages/seasonal/SeasonTargets'
 import { SeasonMasks } from '@/pages/seasonal/SeasonMasks'
 import { SeasonSimulation } from '@/pages/seasonal/SeasonSimulation'
 import { SeasonImplement } from '@/pages/seasonal/SeasonImplement'
@@ -68,9 +69,10 @@ export function App() {
             <Route path="ancillary" element={<Ancillary />} />
             <Route path="budget-targets" element={<BudgetTargets />} />
 
-            {/* Season Planning — Targets staat onder Business Management → Budget & Targets */}
+            {/* Season Planning */}
             <Route path="season/new" element={<NewSeason />} />
             <Route path="season/overview" element={<SeasonOverview />} />
+            <Route path="season/targets" element={<SeasonTargets />} />
             <Route path="season/masks" element={<SeasonMasks />} />
             <Route path="season/simulation" element={<SeasonSimulation />} />
             <Route path="season/implement" element={<SeasonImplement />} />
