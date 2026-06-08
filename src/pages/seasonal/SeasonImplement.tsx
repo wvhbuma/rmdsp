@@ -83,9 +83,12 @@ function ImplementView({ results }: { results: SeasonalResults }) {
     [filteredTargets],
   )
 
+  // sessionId van de geladen sessie → push richt zich op die sessie, niet op de
+  // nieuwste die de server anders zou pakken.
   const mutationArgs = {
     routes: routes.length > 0 ? routes : undefined,
     cabins: cabins.length > 0 ? cabins : undefined,
+    sessionId: results._session?.id,
   }
 
   function runDryRun() {

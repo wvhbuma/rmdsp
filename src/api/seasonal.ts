@@ -147,9 +147,12 @@ export function fetchSessions(signal?: AbortSignal): Promise<SeasonalSession[]> 
  * dry_run (snake_case) + optionele route/cabin-filters (lege filters → de server
  * pusht alles).
  *
- * BACKEND: het Flask-endpoint moet de body-key als fallback accepteren wanneer de
- * env-var niet gezet is:
+ * sessionId (body: `session_id`) richt de push op de geladen sessie; afwezig →
+ * de server pakt de nieuwste sessie.
+ *
+ * BACKEND: het Flask-endpoint moet de body-keys als fallback accepteren:
  *     api_key = os.environ.get("RAM_API_KEY", "") or data.get("api_key", "")
+ *     session_id = data.get("session_id", data.get("sessionId"))  # None → nieuwste
  *
  * Wire-format van de respons is snake_case (status: 'dry_run' | 'ok' | 'error',
  * fare_items); we mappen het naar de camelCase ImplementResult.
@@ -168,12 +171,14 @@ export async function implementFares({
   cabins,
   dryRun = true,
   apiKey,
+  sessionId,
 }: ImplementArgs): Promise<ImplementResult> {
   const wire = await postJson<ImplementResponseWire>('/api/seasonal/implement', {
     dry_run: dryRun,
     routes,
     cabins,
     api_key: apiKey,
+    session_id: sessionId,
   })
   return {
     status: wire.status,
@@ -190,8 +195,9 @@ export async function implementFares({
  * naar RAM. Zelfde api_key-flow als implementFares: alleen bij een live push
  * meegestuurd als `api_key`.
  *
- * BACKEND: idem — env-var met body-fallback:
+ * BACKEND: idem — env-var/body-fallbacks:
  *     api_key = os.environ.get("RAM_API_KEY", "") or data.get("api_key", "")
+ *     session_id = data.get("session_id", data.get("sessionId"))  # None → nieuwste
  *
  * Wire-format verschilt licht per modus: dry-run levert `products`, een live push
  * `pushed` + `batchId`. We mappen naar ImplementResult met 0-defaults zodat de
@@ -211,12 +217,14 @@ export async function pushTargets({
   cabins,
   dryRun = true,
   apiKey,
+  sessionId,
 }: ImplementArgs): Promise<ImplementResult> {
   const wire = await postJson<PushTargetsWire>('/api/seasonal/implement/targets', {
     dry_run: dryRun,
     routes,
     cabins,
     api_key: apiKey,
+    session_id: sessionId,
   })
   return {
     status: wire.status,

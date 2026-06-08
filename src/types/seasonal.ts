@@ -192,12 +192,16 @@ export interface RunPipelineArgs {
  * apiKey wordt alléén bij een LIVE push meegestuurd (in de body als `api_key`),
  * uit de client-side API Configuration (localStorage). Bij een dry-run blijft het
  * leeg en wordt het niet meegestuurd.
+ *
+ * sessionId (body: `session_id`) richt de push op de geladen sessie i.p.v. de
+ * nieuwste; afwezig → de server valt terug op de nieuwste sessie.
  */
 export interface ImplementArgs {
   routes?: string[]
   cabins?: string[]
   dryRun?: boolean
   apiKey?: string
+  sessionId?: number | string
 }
 
 export interface ImplementResult {

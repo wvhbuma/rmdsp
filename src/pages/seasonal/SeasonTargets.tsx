@@ -121,9 +121,12 @@ function TargetsView({
   const keyConfigured = hasApiKey()
   const [showConfirm, setShowConfirm] = useState(false)
 
+  // sessionId van de geladen sessie → push richt zich op die sessie, niet op de
+  // nieuwste die de server anders zou pakken.
   const pushArgs: ImplementArgs = {
     routes: route !== ALL ? [route] : undefined,
     cabins: cabin !== ALL ? [cabin] : undefined,
+    sessionId: session?.id,
   }
 
   function runDryRun() {
