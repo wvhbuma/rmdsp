@@ -11,6 +11,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import * as api from '@/api/seasonal'
 import type {
   DiscoverResponse,
@@ -51,13 +52,44 @@ export function useSeasonalProducts(
   })
 }
 
+/** Parset de ?session= query-param naar een positief sessie-id, of null (= latest). */
+function sessionIdFromParam(raw: string | null): number | null {
+  if (raw === null || !/^\d+$/.test(raw)) return null
+  const n = Number(raw)
+  return Number.isInteger(n) && n > 0 ? n : null
+}
+
+/*
+ * Resultaten voor de actieve seizoen-context: zonder ?session= param de laatst
+ * berekende sessie (/results/latest), met ?session=<id> die specifieke sessie.
+ * Eén useQuery met een dynamische key/fn — geen voorwaardelijke hook-calls.
+ */
 export function useSeasonalResults(): UseQueryResult<SeasonalResults, Error> {
+  const [searchParams] = useSearchParams()
+  const sessionId = sessionIdFromParam(searchParams.get('session'))
+
   return useQuery({
-    queryKey: ['seasonal', 'results'],
-    queryFn: ({ signal }) => api.fetchResults(signal),
+    queryKey:
+      sessionId === null ? ['seasonal', 'results'] : ['seasonal', 'results', sessionId],
+    queryFn: ({ signal }) =>
+      sessionId === null
+        ? api.fetchResults(signal)
+        : api.fetchSessionResults(sessionId, signal),
     // Kort: na een seizoenwissel / pipeline-run snel verse data tonen op
     // pagina's die op de achtergrond gecachet stonden (Budget & Targets etc.).
     staleTime: 10_000,
+  })
+}
+
+/** Resultaten van één specifieke sessie (los van de URL-context). */
+export function useSessionResults(
+  sessionId: number | null,
+): UseQueryResult<SeasonalResults, Error> {
+  return useQuery({
+    queryKey: ['seasonal', 'results', sessionId],
+    queryFn: ({ signal }) => api.fetchSessionResults(sessionId!, signal),
+    enabled: sessionId !== null,
+    staleTime: 60_000,
   })
 }
 

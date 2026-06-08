@@ -220,6 +220,8 @@ export interface ImplementStatus {
 
 /** Een bestaand seizoen (Excel-bestand) zoals opgelijst door /api/seasonal/sessions. */
 export interface SeasonalSession {
+  /** Numeriek id, nodig om de sessie te laden via /api/seasonal/sessions/{id}. */
+  id?: number
   name: string
   file?: string
   modified?: string

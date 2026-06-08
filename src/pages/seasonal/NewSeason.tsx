@@ -21,6 +21,7 @@ import type {
   ProfileAssignment,
   ProfileName,
   SeasonalProduct,
+  SeasonalSession,
 } from '@/types/seasonal'
 import { cabinLabel } from '@/config/displacement'
 import { PROFILE_COLORS } from '@/config/seasonal'
@@ -151,6 +152,13 @@ export function NewSeason() {
     )
   }
 
+  // Open een bestaand seizoen: zet ?session=<id> zodat alle season-pagina's die
+  // sessie tonen (useSeasonalResults pakt de param op) en herlaad de cache.
+  function loadSeason(sessionId: number) {
+    void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+    navigate(`/season/overview?session=${sessionId}`)
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <header className="space-y-3">
@@ -158,9 +166,7 @@ export function NewSeason() {
         <ProgressSteps steps={STEPS} current={step} />
       </header>
 
-      {step === 0 && (
-        <LoadExistingSeason onLoad={() => navigate('/season/overview')} />
-      )}
+      {step === 0 && <LoadExistingSeason onLoad={loadSeason} />}
 
       {step === 0 && (
         <StepSeason
@@ -216,9 +222,9 @@ export function NewSeason() {
 
 /* ── Load Existing Season ───────────────────────────────────────────────── */
 
-function LoadExistingSeason({ onLoad }: { onLoad: (session: string) => void }) {
+function LoadExistingSeason({ onLoad }: { onLoad: (sessionId: number) => void }) {
   const sessions = useSeasonalSessions()
-  const [selected, setSelected] = useState('')
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   // Backend (Flask) kan offline zijn — toon dan een subtiele melding i.p.v. fout.
   let body: ReactNode
@@ -229,26 +235,42 @@ function LoadExistingSeason({ onLoad }: { onLoad: (session: string) => void }) {
       <span className="font-body text-xs text-rm-gray">No existing seasons found.</span>
     )
   } else {
-    const effective = sessions.data.some((s) => s.name === selected)
-      ? selected
-      : sessions.data[0].name
-    body = (
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={effective}
-          onChange={(e) => setSelected(e.target.value)}
-          className="max-w-[320px] rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
-        >
-          {sessions.data.map((s) => (
-            <option key={s.name} value={s.name}>
-              {s.name}
-              {s.modified ? ` · ${s.modified}` : ''}
-            </option>
-          ))}
-        </select>
-        <PrimaryButton onClick={() => onLoad(effective)}>Load season</PrimaryButton>
-      </div>
+    // Alleen sessies met een numeriek id zijn laadbaar (/sessions/{id}).
+    const loadable = sessions.data.filter(
+      (s): s is SeasonalSession & { id: number } => typeof s.id === 'number',
     )
+    const effectiveId =
+      selectedId !== null && loadable.some((s) => s.id === selectedId)
+        ? selectedId
+        : (loadable[0]?.id ?? null)
+
+    body =
+      loadable.length === 0 ? (
+        <span className="font-body text-xs text-rm-gray">
+          No loadable seasons found.
+        </span>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={effectiveId !== null ? String(effectiveId) : ''}
+            onChange={(e) => setSelectedId(Number(e.target.value))}
+            className="max-w-[320px] rounded-md border border-rm-border bg-rm-surface px-3 py-2 font-body text-sm text-rm-dark focus:border-es-blue focus:outline-none"
+          >
+            {loadable.map((s) => (
+              <option key={s.id} value={String(s.id)}>
+                {s.name}
+                {s.modified ? ` · ${s.modified}` : ''}
+              </option>
+            ))}
+          </select>
+          <PrimaryButton
+            onClick={() => effectiveId !== null && onLoad(effectiveId)}
+            disabled={effectiveId === null}
+          >
+            Load season
+          </PrimaryButton>
+        </div>
+      )
   }
 
   return (

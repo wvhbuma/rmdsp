@@ -20,6 +20,7 @@ import type {
   SeasonalConfig,
   SeasonalResults,
   SeasonalSession,
+  SeasonalSessionInfo,
 } from '@/types/seasonal'
 
 const BASE = SEASONAL_API_BASE_URL ?? 'http://localhost:5050'
@@ -86,6 +87,31 @@ export function runPipeline({
 
 export function fetchResults(signal?: AbortSignal): Promise<SeasonalResults> {
   return getJson<SeasonalResults>('/api/seasonal/results/latest', signal)
+}
+
+/*
+ * GET /api/seasonal/sessions/{id} → resultaten van één specifieke sessie, zelfde
+ * vorm als /results/latest. Dit endpoint levert de sessie-info echter onder de
+ * key `session`, terwijl de rest van de app `_session` verwacht — normaliseren.
+ */
+interface SessionResultsWire extends SeasonalResults {
+  session?: SeasonalSessionInfo
+}
+
+export async function fetchSessionResults(
+  sessionId: number,
+  signal?: AbortSignal,
+): Promise<SeasonalResults> {
+  const data = await getJson<SessionResultsWire>(
+    `/api/seasonal/sessions/${sessionId}`,
+    signal,
+  )
+  return {
+    targets: data.targets,
+    masks: data.masks,
+    sim: data.sim,
+    _session: data._session ?? data.session,
+  }
 }
 
 /*
