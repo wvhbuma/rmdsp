@@ -85,6 +85,11 @@ RAM_API_HEALTH_ENDPOINT=/health
 
 ## Gotchas uit eerdere sessies
 
+**Dev auth bypass:**
+- `VITE_DEV_NO_AUTH=true` slaat `AuthGate` over in dev (voor visuele tests van
+  v2-pagina's zonder live Entra-sessie). **NOOIT** in productie of CI zetten —
+  Vite bakt env-vars build-time in, dus een prod-build met deze vlaag = geen auth.
+
 **React Router v7:**
 - Library mode gebruiken, niet framework mode. Geen `loader`-functies.
 - `<NavLink>` heeft ingebouwde `isActive` — gebruik dat, niet `useLocation` matching.
