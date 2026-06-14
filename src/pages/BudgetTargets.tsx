@@ -9,7 +9,6 @@
  * FilterBar is gebonden aan het displacement-datamodel en hier niet herbruikbaar.
  */
 import { useMemo, useState } from 'react'
-import * as XLSX from 'xlsx'
 import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
 import { useSeasonalResults } from '@/hooks/useSeasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
@@ -106,7 +105,9 @@ function TargetsView({
     [targets, route, cabin, month],
   )
 
-  function exportExcel() {
+  async function exportExcel() {
+    // xlsx lazy geladen: houdt het uit de initiële bundle (~800KB besparing).
+    const XLSX = await import('xlsx')
     // Detail: zelfde sortering als de tabel; respecteert de actieve filters.
     const detail = [...filtered].sort(
       (a, b) =>

@@ -8,7 +8,6 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import * as XLSX from 'xlsx'
 import {
   useDiscoverRoutes,
   useRunPipeline,
@@ -536,6 +535,8 @@ function ProfileBody({
     setImportMsg('')
     try {
       const buf = await file.arrayBuffer()
+      // xlsx lazy geladen: houdt het uit de initiële bundle (~800KB besparing).
+      const XLSX = await import('xlsx')
       const wb = XLSX.read(buf, { type: 'array', cellDates: true })
       const sheet = wb.Sheets[wb.SheetNames[0]]
       if (!sheet) return
