@@ -22,7 +22,7 @@ import { DestinationTabs } from '@/components/seasonal/DestinationTabs'
 import { NumberInput } from '@/components/seasonal/NumberInput'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
 import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 
 const ELASTICITY_MONTHS = ['Nov', 'Dec', 'Jan']
 

@@ -39,14 +39,14 @@ import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { paletteColors, pickColor } from '@/config/userPreferences'
 import { FilterBar } from '@/components/displacement/FilterBar'
 import { EChart } from '@/components/displacement/EChart'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { LfHeatmap } from '@/components/displacement/LfHeatmap'
 import { Icon } from '@/layout/icons'
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-} from '@/components/displacement/StateViews'
+} from '@/components/ui/StateViews'
 import type { EChartsCoreOption } from 'echarts/core'
 
 export function DisplacementDepartures() {

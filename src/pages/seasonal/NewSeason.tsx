@@ -28,13 +28,13 @@ import { cabinLabel } from '@/config/displacement'
 import { PROFILE_COLORS } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { ProgressSteps } from '@/components/seasonal/ProgressSteps'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { KpiCard } from '@/components/displacement/KpiCard'
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-} from '@/components/displacement/StateViews'
+} from '@/components/ui/StateViews'
 
 const STEPS = ['Season', 'Routes', 'Profiles', 'Pipeline']
 

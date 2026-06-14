@@ -18,10 +18,10 @@ import {
   formatPct,
 } from '@/utils/format'
 import { KpiCard } from '@/components/displacement/KpiCard'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { EChart } from '@/components/displacement/EChart'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
-import { ErrorState, LoadingState } from '@/components/displacement/StateViews'
+import { ErrorState, LoadingState } from '@/components/ui/StateViews'
 import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 const ALL = 'all'

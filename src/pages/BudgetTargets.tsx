@@ -14,13 +14,13 @@ import type { SeasonalSessionInfo, SeasonalTarget } from '@/types/seasonal'
 import { useSeasonalResults } from '@/hooks/useSeasonal'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { SessionBadge } from '@/components/seasonal/SessionBadge'
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-} from '@/components/displacement/StateViews'
+} from '@/components/ui/StateViews'
 import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 export function BudgetTargets() {

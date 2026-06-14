@@ -24,12 +24,12 @@ import { formatCurrency, formatNumber } from '@/utils/format'
 import { FilterBar } from '@/components/displacement/FilterBar'
 import { MonthTable } from '@/components/displacement/MonthTable'
 import { EChart } from '@/components/displacement/EChart'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-} from '@/components/displacement/StateViews'
+} from '@/components/ui/StateViews'
 import type { EChartsCoreOption } from 'echarts/core'
 
 export function DisplacementMonthly() {
