@@ -26,13 +26,19 @@ const queryClient = new QueryClient()
  * een developer tenminste zien wat er mist.
  */
 async function bootstrap(root: Root): Promise<void> {
-  const missing = missingEntraVars()
-  if (missing.length > 0) {
-    root.render(<ConfigError missing={missing} />)
-    return
+  // Dev-only: VITE_DEV_NO_AUTH=true slaat Entra-config-checks + login over en
+  // gebruikt een stub MSAL-instance (geen netwerk). NOOIT in productie/CI.
+  const devNoAuth = import.meta.env.VITE_DEV_NO_AUTH === 'true'
+
+  if (!devNoAuth) {
+    const missing = missingEntraVars()
+    if (missing.length > 0) {
+      root.render(<ConfigError missing={missing} />)
+      return
+    }
   }
 
-  const instance = await getMsalInstance()
+  const instance = await getMsalInstance(devNoAuth)
   if (!instance) {
     root.render(<ConfigError missing={['MSAL instance kon niet initialiseren']} />)
     return

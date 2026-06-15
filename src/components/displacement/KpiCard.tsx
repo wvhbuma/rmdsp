@@ -4,13 +4,14 @@
  * constrained, etc.). Zie de visuele spec in de displacement-prompt.
  */
 
-export type KpiAccent = 'neutral' | 'red' | 'blue' | 'magenta'
+export type KpiAccent = 'neutral' | 'red' | 'blue' | 'magenta' | 'green'
 
 const ACCENT_TEXT: Record<KpiAccent, string> = {
   neutral: 'text-rm-dark',
   red: 'text-villain',
   blue: 'text-es-blue',
   magenta: 'text-es-magenta',
+  green: 'text-lf-green',
 }
 
 type KpiCardProps = {

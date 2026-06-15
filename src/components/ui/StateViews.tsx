@@ -15,11 +15,17 @@ export function LoadingState({ label = 'Data laden…' }: { label?: string }) {
   )
 }
 
-export function ErrorState({ message }: { message: string }) {
+export function ErrorState({
+  message,
+  title = 'Kon displacement-data niet laden',
+}: {
+  message: string
+  title?: string
+}) {
   return (
     <div className="m-6 rounded-lg border border-status-error/30 bg-status-error/5 p-5">
       <div className="font-display font-semibold text-sm text-status-error mb-1">
-        Kon displacement-data niet laden
+        {title}
       </div>
       <div className="font-body text-xs text-rm-gray">{message}</div>
     </div>

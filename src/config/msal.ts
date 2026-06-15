@@ -63,12 +63,29 @@ export const LOGIN_REQUEST: RedirectRequest = {
  */
 let cached: PublicClientApplication | null = null
 
-export async function getMsalInstance(): Promise<PublicClientApplication | null> {
+export async function getMsalInstance(devNoAuth = false): Promise<PublicClientApplication | null> {
   if (cached) return cached
-  const config = buildConfiguration()
+  const config = devNoAuth ? buildDevConfiguration() : buildConfiguration()
   if (!config) return null
   const instance = new PublicClientApplication(config)
   await instance.initialize()
   cached = instance
   return instance
+}
+
+/*
+ * Dev-only stub-config voor VITE_DEV_NO_AUTH=true: een geldige MSAL-instance
+ * zonder Entra-tenant, zodat useMsal() blijft werken (Topbar) zonder netwerk-
+ * call naar Entra. Er wordt nooit interactief ingelogd (AuthGate bypass), dus
+ * de common-authority wordt nooit gecontacteerd.
+ */
+function buildDevConfiguration(): Configuration {
+  return {
+    auth: {
+      clientId: '00000000-0000-0000-0000-000000000000',
+      authority: 'https://login.microsoftonline.com/common',
+      redirectUri: window.location.origin,
+    },
+    cache: { cacheLocation: 'sessionStorage' },
+  }
 }

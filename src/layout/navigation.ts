@@ -46,6 +46,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Flight Optimization',
     icon: 'activity',
     children: [
+      { label: 'Findings', path: '/findings', icon: 'alert-triangle' },
       { label: 'Overview', path: '/flight-overview', icon: 'target' },
       { label: 'Cockpit', path: '/cockpit', icon: 'clock' },
       { label: 'Network View', path: '/network-view', icon: 'network' },
@@ -115,6 +116,22 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Ancillary Management', path: '/ancillary', icon: 'package' },
       { label: 'Budget & Targets', path: '/budget-targets', icon: 'target' },
     ],
+    subgroups: [
+      {
+        key: 'bm-season',
+        label: 'Season Planning',
+        icon: 'calendar',
+        items: [
+          { label: 'New Season', path: '/season/new', icon: 'target' },
+          { label: 'Season Overview', path: '/season/overview', icon: 'bar-chart' },
+          { label: 'Targets', path: '/season/targets', icon: 'target' },
+          { label: 'Masks', path: '/season/masks', icon: 'layers' },
+          { label: 'Simulation', path: '/season/simulation', icon: 'activity' },
+          { label: 'Implementation', path: '/season/implement', icon: 'check-square' },
+          { label: 'Settings', path: '/season/settings', icon: 'sliders' },
+        ],
+      },
+    ],
   },
   {
     key: 'settings',
@@ -125,6 +142,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Decision Log', path: '/decision-log', icon: 'check-square' },
       { label: 'Approval Rules', path: '/approval-rules', icon: 'check' },
       { label: 'User Preferences', path: '/settings/preferences', icon: 'sliders' },
+      { label: 'API Configuration', path: '/settings/api-configuration', icon: 'network' },
     ],
   },
 ]
