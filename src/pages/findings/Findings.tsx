@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const PAGE_SIZE = 15
 
@@ -230,19 +231,21 @@ function ActionButton({
   onClick: () => void
   children: ReactNode
 }) {
-  // Native title i.p.v. Radix Tooltip: shadcn 4.x Button heeft geen forwardRef,
-  // dus <TooltipTrigger asChild><Button> faalt op React 18 (ref → null). Zie rapport.
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      disabled={disabled}
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-    >
-      {children}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={disabled}
+          onClick={onClick}
+          aria-label={label}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   )
 }
 
