@@ -46,6 +46,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Flight Optimization',
     icon: 'activity',
     children: [
+      { label: 'Findings', path: '/findings', icon: 'alert-triangle' },
       { label: 'Overview', path: '/flight-overview', icon: 'target' },
       { label: 'Cockpit', path: '/cockpit', icon: 'clock' },
       { label: 'Network View', path: '/network-view', icon: 'network' },
