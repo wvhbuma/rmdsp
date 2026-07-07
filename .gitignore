@@ -27,4 +27,4 @@ npm-debug.log*
 *.tsbuildinfo
 
 # Demo API (niet onderdeel van frontend repo)
-api/
+/api/
