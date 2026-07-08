@@ -15,6 +15,7 @@ import {
   effectiveMonths,
   filterDepartures,
   filterSummary,
+  summarizeDepartures,
   sumBy,
   type DisplacementFilter,
 } from '@/utils/displacement'
@@ -55,13 +56,29 @@ function ReportingView({ data }: { data: DisplacementResponse }) {
   )
 
   const months = useMemo(() => effectiveMonths(data, filter), [data, filter])
-  const summary = useMemo(
-    () => filterSummary(data, filter, months),
-    [data, filter, months],
-  )
   const departures = useMemo(
     () => filterDepartures(data, filter, months),
     [data, filter, months],
+  )
+  // Eén bron van waarheid: alle numerieke aggregaties (KPI's, piekmaand, trend,
+  // tabel) komen uit de cabin-filterbare departures, gereconstrueerd naar
+  // summary-vorm. Zo reageert de hele pagina op de cabin-selectie, net als de
+  // donut (die al op departures draait).
+  const cabinSummary = useMemo(
+    () => summarizeDepartures(departures),
+    [departures],
+  )
+  // filterSummary bepaalt hier alléén welke maanden in scope zijn (de as van
+  // trend en tabel), nooit de getallen. Zo blijft de maand-as identiek aan de
+  // vorige, summary-gebaseerde versie — inclusief lege maanden als 0-bar i.p.v.
+  // dat ze verdwijnen (bv. Paris vóór maart 2026 heeft geen departures).
+  const scopeSummary = useMemo(
+    () => filterSummary(data, filter, months),
+    [data, filter, months],
+  )
+  const summary = useMemo(
+    () => padMonthsToScope(cabinSummary, scopeSummary),
+    [cabinSummary, scopeSummary],
   )
 
   // KPI's.
@@ -95,7 +112,7 @@ function ReportingView({ data }: { data: DisplacementResponse }) {
       <FilterBar data={data} value={filter} onChange={setFilter} periodMode="multi" />
 
       <div className="space-y-6 p-6">
-        {summary.length === 0 ? (
+        {cabinSummary.length === 0 ? (
           <EmptyState />
         ) : (
           <>
@@ -152,6 +169,43 @@ function ReportingView({ data }: { data: DisplacementResponse }) {
       </div>
     </div>
   )
+}
+
+/*
+ * Zorgt dat elke maand die in scope is (scopeSummary) een rij houdt, ook als er
+ * voor die maand geen departures zijn. Zo blijft de maand-as van trend en tabel
+ * identiek aan de summary-gebaseerde versie: lege maanden tonen een 0-bar/0-rij
+ * i.p.v. te verdwijnen. De padding-rijen zijn puur nul en veranderen dus geen
+ * enkele som, piekmaand of percentage.
+ */
+function padMonthsToScope(
+  rows: DisplacementSummary[],
+  scopeSummary: DisplacementSummary[],
+): DisplacementSummary[] {
+  const present = new Set(rows.map((r) => r.month))
+  const padded = [...rows]
+  for (const s of scopeSummary) {
+    if (present.has(s.month)) continue
+    present.add(s.month)
+    padded.push({
+      market: s.market,
+      route: s.route,
+      month: s.month,
+      bedRevenue: 0,
+      bedDisplacement: 0,
+      bedDisplacementPct: 0,
+      bedDepartures: 0,
+      bedConstrained: 0,
+      seatRevenue: 0,
+      seatDisplacement: 0,
+      seatDepartures: 0,
+      seatConstrained: 0,
+      totalRevenue: 0,
+      totalDisplacement: 0,
+      totalDisplacementPct: 0,
+    })
+  }
+  return padded
 }
 
 function peakMonth(
