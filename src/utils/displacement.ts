@@ -169,3 +169,72 @@ export function filterLegs(
 export function sumBy<T>(rows: T[], pick: (row: T) => number): number {
   return rows.reduce((acc, r) => acc + pick(r), 0)
 }
+
+/**
+ * Reconstrueert summary-rijen (één per markt/route/maand) uit departure-rijen.
+ *
+ * De API levert `summary` als voor-aggregatie van `departures` over álle cabins;
+ * de summary heeft dus géén cabin-dimensie en kan niet op cabin gefilterd worden.
+ * Deze helper bouwt dezelfde summary-vorm op uit de (wél cabin-filterbare)
+ * departures, zodat trend/KPI's/piekmaand/tabel op de cabin-selectie reageren —
+ * net als de donut.
+ *
+ * Aannames, geverifieerd tegen de dataset (afwijking = alleen float-afronding):
+ * - bed/seat-split komt uit `type`
+ * - revenue = som van `actual` (FIFO-revenue), NIET `optimal` (yield-optimaal)
+ * - displacement = som van `displacement`
+ * - *Departures = aantal departure-rijen van dat type
+ * - *Constrained = aantal rijen met `constrained === true`
+ *
+ * Bij cabins:[] reproduceert dit de originele summary-getallen per maand.
+ * Percentages worden opnieuw berekend (die mag je niet sommeren).
+ */
+export function summarizeDepartures(
+  departures: DisplacementDeparture[],
+): DisplacementSummary[] {
+  const byKey = new Map<string, DisplacementSummary>()
+  for (const d of departures) {
+    const key = `${d.market}|${d.route}|${d.month}`
+    let row = byKey.get(key)
+    if (row === undefined) {
+      row = {
+        market: d.market,
+        route: d.route,
+        month: d.month,
+        bedRevenue: 0,
+        bedDisplacement: 0,
+        bedDisplacementPct: 0,
+        bedDepartures: 0,
+        bedConstrained: 0,
+        seatRevenue: 0,
+        seatDisplacement: 0,
+        seatDepartures: 0,
+        seatConstrained: 0,
+        totalRevenue: 0,
+        totalDisplacement: 0,
+        totalDisplacementPct: 0,
+      }
+      byKey.set(key, row)
+    }
+    if (d.type === 'bed') {
+      row.bedRevenue += d.actual
+      row.bedDisplacement += d.displacement
+      row.bedDepartures += 1
+      if (d.constrained) row.bedConstrained += 1
+    } else {
+      row.seatRevenue += d.actual
+      row.seatDisplacement += d.displacement
+      row.seatDepartures += 1
+      if (d.constrained) row.seatConstrained += 1
+    }
+    row.totalRevenue += d.actual
+    row.totalDisplacement += d.displacement
+  }
+  for (const row of byKey.values()) {
+    row.bedDisplacementPct =
+      row.bedRevenue > 0 ? (row.bedDisplacement / row.bedRevenue) * 100 : 0
+    row.totalDisplacementPct =
+      row.totalRevenue > 0 ? (row.totalDisplacement / row.totalRevenue) * 100 : 0
+  }
+  return [...byKey.values()]
+}
