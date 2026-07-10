@@ -52,7 +52,10 @@ export interface DisplacementOD {
   zone: number
   units: number
   avgFare: number
-  category: string // "villain" | "victim"
+  // Rauw label uit de export, bv. "Low-Yield (villain)" / "High-Yield (victim)".
+  // Lees dit nooit met een exacte '===' match — gebruik odCategory() (utils)
+  // voor de genormaliseerde villain/victim-classificatie.
+  category: string
 }
 
 export interface LegData {

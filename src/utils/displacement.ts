@@ -11,6 +11,7 @@ import type {
   DisplacementOD,
   DisplacementResponse,
   DisplacementSummary,
+  OdCategory,
 } from '@/types/displacement'
 import { marketsForDirection } from '@/config/routes'
 
@@ -168,6 +169,22 @@ export function filterLegs(
 /** Som van een numeriek veld over een rij-array. */
 export function sumBy<T>(rows: T[], pick: (row: T) => number): number {
   return rows.reduce((acc, r) => acc + pick(r), 0)
+}
+
+/*
+ * Genormaliseerde villain/victim-classificatie van een O&D-record.
+ *
+ * De API/fixture levert `category` als een label, niet als kale enum-waarde:
+ * "Low-Yield (villain)" resp. "High-Yield (victim)". We matchen daarom op de
+ * substring, case-insensitive — zo werkt zowel dat label als een eventuele
+ * kale "villain"/"victim". Onbekende/lege waarden → null (niet geplot/ge-badged).
+ * Gedeeld door scatter én O&D-cards zodat ze gegarandeerd dezelfde split maken.
+ */
+export function odCategory(o: DisplacementOD): OdCategory | null {
+  const c = o.category.toLowerCase()
+  if (c.includes('villain')) return 'villain'
+  if (c.includes('victim')) return 'victim'
+  return null
 }
 
 /**

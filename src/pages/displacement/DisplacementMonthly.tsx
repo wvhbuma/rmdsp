@@ -15,6 +15,7 @@ import {
   effectiveMonths,
   filterOd,
   filterSummary,
+  odCategory,
   type DisplacementFilter,
 } from '@/utils/displacement'
 import { cabinLabel, COLORS } from '@/config/displacement'
@@ -150,8 +151,8 @@ function buildScatterOption(
     return point
   }
 
-  const villains = od.filter((o) => o.category === 'villain').map(toPoint)
-  const victims = od.filter((o) => o.category === 'victim').map(toPoint)
+  const villains = od.filter((o) => odCategory(o) === 'villain').map(toPoint)
+  const victims = od.filter((o) => odCategory(o) === 'victim').map(toPoint)
   const medianFare = median(od.map((o) => o.avgFare))
 
   return {
@@ -226,7 +227,7 @@ function OdCard({
   od: DisplacementOD
   stationNames: Record<string, string>
 }) {
-  const isVillain = od.category === 'villain'
+  const isVillain = odCategory(od) === 'villain'
   // Accent via theme-token-classes (villain = rood, victim = ES-blue).
   const accentBorder = isVillain ? 'border-l-villain' : 'border-l-es-blue'
   const accentBg = isVillain ? 'bg-villain' : 'bg-es-blue'
