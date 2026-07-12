@@ -113,6 +113,7 @@ export function Sidebar() {
                       sub={sub}
                       isOpen={openKeys.has(sub.key)}
                       onToggle={() => toggle(sub.key)}
+                      asChild={Boolean(group.children?.length)}
                     />
                   ))}
                 </div>
@@ -177,23 +178,33 @@ function SubgroupBlock({
   sub,
   isOpen,
   onToggle,
+  asChild = false,
 }: {
   sub: NavSubgroup
   isOpen: boolean
   onToggle: () => void
+  /*
+   * `asChild`: deze subgroup staat tussen directe children van de groep (bv.
+   * Season Planning naast Budget & Targets onder Business Management). De header
+   * krijgt dan exact de child-leaf styling (px-5, text-[13px], 16px icon) zodat
+   * hij op hetzelfde niveau staat. Zonder children (bv. Multi-Leg onder Business
+   * Overview) houdt de header de ingesprongen subgroup-styling.
+   */
+  asChild?: boolean
 }) {
+  const headerClass = asChild
+    ? 'flex items-center gap-2.5 px-5 py-2.5 w-full text-left font-display font-medium text-[13px] text-rm-gray hover:bg-rm-gray-light hover:text-rm-dark transition-colors'
+    : 'flex items-center gap-2.5 pl-8 pr-5 py-2 w-full text-left font-display font-medium text-xs text-rm-gray hover:bg-rm-gray-light hover:text-rm-dark transition-colors'
+  const iconClass = asChild ? 'w-[16px] h-[16px] shrink-0' : 'w-[14px] h-[14px] shrink-0'
+  const chevronClass = asChild ? 'w-[14px] h-[14px] shrink-0' : 'w-[12px] h-[12px] shrink-0'
   return (
     <div>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex items-center gap-2.5 pl-8 pr-5 py-2 w-full text-left font-display font-medium text-xs text-rm-gray hover:bg-rm-gray-light hover:text-rm-dark transition-colors"
-      >
-        <Icon name={sub.icon} className="w-[14px] h-[14px] shrink-0" />
+      <button type="button" onClick={onToggle} className={headerClass}>
+        <Icon name={sub.icon} className={iconClass} />
         <span className="flex-1">{sub.label}</span>
         <Icon
           name="chevron-down"
-          className={`w-[12px] h-[12px] shrink-0 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+          className={`${chevronClass} transition-transform ${isOpen ? '' : '-rotate-90'}`}
         />
       </button>
       {isOpen && (
