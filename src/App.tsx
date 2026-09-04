@@ -18,7 +18,7 @@ import { CompetitorIntel } from '@/pages/_placeholders/CompetitorIntel'
 import { DistributionChannels } from '@/pages/_placeholders/DistributionChannels'
 import { Overbooking } from '@/pages/_placeholders/Overbooking'
 import { Ancillary } from '@/pages/_placeholders/Ancillary'
-import { BudgetTargets } from '@/pages/_placeholders/BudgetTargets'
+import { BudgetTargets } from '@/pages/BudgetTargets'
 import { AuditTrail } from '@/pages/_placeholders/AuditTrail'
 import { DecisionLog } from '@/pages/_placeholders/DecisionLog'
 import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
@@ -26,6 +26,14 @@ import { DisplacementReporting } from '@/pages/displacement/DisplacementReportin
 import { DisplacementMonthly } from '@/pages/displacement/DisplacementMonthly'
 import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartures'
 import { UserPreferences } from '@/pages/settings/UserPreferences'
+import { ApiConfiguration } from '@/pages/settings/ApiConfiguration'
+import { NewSeason } from '@/pages/seasonal/NewSeason'
+import { SeasonOverview } from '@/pages/seasonal/SeasonOverview'
+import { SeasonTargets } from '@/pages/seasonal/SeasonTargets'
+import { SeasonMasks } from '@/pages/seasonal/SeasonMasks'
+import { SeasonSimulation } from '@/pages/seasonal/SeasonSimulation'
+import { SeasonImplement } from '@/pages/seasonal/SeasonImplement'
+import { SeasonSettings } from '@/pages/seasonal/SeasonSettings'
 
 export function App() {
   return (
@@ -62,11 +70,21 @@ export function App() {
             <Route path="ancillary" element={<Ancillary />} />
             <Route path="budget-targets" element={<BudgetTargets />} />
 
+            {/* Season Planning */}
+            <Route path="season/new" element={<NewSeason />} />
+            <Route path="season/overview" element={<SeasonOverview />} />
+            <Route path="season/targets" element={<SeasonTargets />} />
+            <Route path="season/masks" element={<SeasonMasks />} />
+            <Route path="season/simulation" element={<SeasonSimulation />} />
+            <Route path="season/implement" element={<SeasonImplement />} />
+            <Route path="season/settings" element={<SeasonSettings />} />
+
             {/* Settings */}
             <Route path="audit" element={<AuditTrail />} />
             <Route path="decision-log" element={<DecisionLog />} />
             <Route path="approval-rules" element={<ApprovalRules />} />
             <Route path="settings/preferences" element={<UserPreferences />} />
+            <Route path="settings/api-configuration" element={<ApiConfiguration />} />
 
             {/* 404 fallback */}
             <Route path="*" element={<NotFound />} />

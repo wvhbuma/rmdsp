@@ -19,6 +19,10 @@ export const RAM_API_BASE_URL: string | null = optional(
   import.meta.env.VITE_RAM_API_BASE_URL,
 )
 
+export const SEASONAL_API_BASE_URL: string | null = optional(
+  import.meta.env.VITE_SEASONAL_API_BASE_URL,
+)
+
 export const ENTRA_TENANT_NAME: string | null = optional(
   import.meta.env.VITE_ENTRA_TENANT_NAME,
 )

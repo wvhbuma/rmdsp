@@ -1,0 +1,247 @@
+{
+  "destinations": {
+    "Milan": {
+      "routes": [
+        "BEMI-MIL",
+        "MIL-BEMI"
+      ],
+      "yieldMultiplier": 1.2,
+      "elasticities": {
+        "Jan": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Feb": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Mar": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Apr": {
+          "SEA": -1.5,
+          "CHT": -1.0,
+          "CMF": -0.8,
+          "SLP": -0.6
+        },
+        "May": {
+          "SEA": -1.4,
+          "CHT": -0.9,
+          "CMF": -0.7,
+          "SLP": -0.5
+        },
+        "Jun": {
+          "SEA": -1.2,
+          "CHT": -0.8,
+          "CMF": -0.6,
+          "SLP": -0.5
+        },
+        "Jul": {
+          "SEA": -1.0,
+          "CHT": -0.7,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Aug": {
+          "SEA": -1.0,
+          "CHT": -0.7,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Sep": {
+          "SEA": -1.3,
+          "CHT": -0.9,
+          "CMF": -0.7,
+          "SLP": -0.5
+        },
+        "Oct": {
+          "SEA": -1.5,
+          "CHT": -1.0,
+          "CMF": -0.8,
+          "SLP": -0.6
+        }
+      },
+      "constraints": {
+        "targetLfCeiling": 0.95,
+        "maxYieldDecline": 0.15,
+        "highLfThreshold": 0.9,
+        "highLfYieldBonus": 0.1
+      },
+      "zoneDiscounts": {
+        "SEA": 1,
+        "CHT": 0.95,
+        "CMF": 0.9,
+        "SLP": 0.85
+      }
+    },
+    "Prague": {
+      "routes": [
+        "BEMI-PRA",
+        "PRA-BEMI"
+      ],
+      "yieldMultiplier": 1,
+      "elasticities": {
+        "Jan": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Feb": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Mar": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Apr": {
+          "SEA": -1.5,
+          "CHT": -1.0,
+          "CMF": -0.8,
+          "SLP": -0.6
+        },
+        "May": {
+          "SEA": -1.4,
+          "CHT": -0.9,
+          "CMF": -0.7,
+          "SLP": -0.5
+        },
+        "Jun": {
+          "SEA": -1.2,
+          "CHT": -0.8,
+          "CMF": -0.6,
+          "SLP": -0.5
+        },
+        "Jul": {
+          "SEA": -1.0,
+          "CHT": -0.7,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Aug": {
+          "SEA": -1.0,
+          "CHT": -0.7,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Sep": {
+          "SEA": -1.3,
+          "CHT": -0.9,
+          "CMF": -0.7,
+          "SLP": -0.5
+        },
+        "Oct": {
+          "SEA": -1.5,
+          "CHT": -1.0,
+          "CMF": -0.8,
+          "SLP": -0.6
+        }
+      },
+      "constraints": {
+        "targetLfCeiling": 0.95,
+        "maxYieldDecline": 0.2,
+        "highLfThreshold": 0.93,
+        "highLfYieldBonus": 0.05
+      },
+      "zoneDiscounts": {
+        "SEA": 0.65,
+        "CHT": 0.89,
+        "CMF": 0.86,
+        "SLP": 0.92
+      }
+    },
+    "Paris": {
+      "routes": [
+        "PNO-BLS",
+        "BLS-PNO"
+      ],
+      "yieldMultiplier": 1,
+      "elasticities": {
+        "Jan": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Feb": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Mar": {
+          "SEA": -1.2,
+          "CHT": -0.7,
+          "CMF": -0.6,
+          "SLP": -0.4
+        },
+        "Apr": {
+          "SEA": -1.3,
+          "CHT": -0.9,
+          "CMF": -0.7,
+          "SLP": -0.5
+        },
+        "May": {
+          "SEA": -1.2,
+          "CHT": -0.8,
+          "CMF": -0.6,
+          "SLP": -0.5
+        },
+        "Jun": {
+          "SEA": -1.0,
+          "CHT": -0.7,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Jul": {
+          "SEA": -0.9,
+          "CHT": -0.6,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Aug": {
+          "SEA": -0.9,
+          "CHT": -0.6,
+          "CMF": -0.5,
+          "SLP": -0.4
+        },
+        "Sep": {
+          "SEA": -1.2,
+          "CHT": -0.8,
+          "CMF": -0.6,
+          "SLP": -0.5
+        },
+        "Oct": {
+          "SEA": -1.4,
+          "CHT": -0.9,
+          "CMF": -0.7,
+          "SLP": -0.6
+        }
+      },
+      "constraints": {
+        "targetLfCeiling": 0.95,
+        "maxYieldDecline": 0.15,
+        "highLfThreshold": 0.9,
+        "highLfYieldBonus": 0.1
+      },
+      "zoneDiscounts": {
+        "SEA": 1,
+        "CHT": 0.95,
+        "CMF": 0.9,
+        "SLP": 0.85
+      }
+    }
+  }
+}
