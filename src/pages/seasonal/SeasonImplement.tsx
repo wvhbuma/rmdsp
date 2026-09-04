@@ -14,9 +14,9 @@ import { useApiConfig } from '@/hooks/useApiConfig'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatNumber } from '@/utils/format'
 import { KpiCard } from '@/components/displacement/KpiCard'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { Icon } from '@/layout/icons'
-import { ErrorState, LoadingState } from '@/components/displacement/StateViews'
+import { ErrorState, LoadingState } from '@/components/ui/StateViews'
 import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 export function SeasonImplement() {

@@ -13,6 +13,13 @@ import { Login } from '@/pages/Login'
  *   — dat voorkomt flash-of-login-page bij refresh met geldige sessie
  */
 export function AuthGate({ children }: { children: ReactNode }) {
+  // Dev-only ontsnapping: VITE_DEV_NO_AUTH=true slaat de Entra-login over zodat
+  // v2-pagina's lokaal visueel getest kunnen worden zonder live sessie.
+  // NOOIT in productie of CI zetten (env wordt build-time ingebakken).
+  if (import.meta.env.VITE_DEV_NO_AUTH === 'true') {
+    return <>{children}</>
+  }
+
   return (
     <>
       <AuthenticatedTemplate>{children}</AuthenticatedTemplate>

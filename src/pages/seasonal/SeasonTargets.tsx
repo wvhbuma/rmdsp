@@ -10,7 +10,6 @@
  * FilterBar is gebonden aan het displacement-datamodel en hier niet herbruikbaar.
  */
 import { useMemo, useState } from 'react'
-import * as XLSX from 'xlsx'
 import type {
   ImplementArgs,
   ImplementResult,
@@ -21,14 +20,14 @@ import { usePushTargets, useSeasonalResults } from '@/hooks/useSeasonal'
 import { useApiConfig } from '@/hooks/useApiConfig'
 import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { SessionBadge } from '@/components/seasonal/SessionBadge'
 import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-} from '@/components/displacement/StateViews'
+} from '@/components/ui/StateViews'
 import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 export function SeasonTargets() {
@@ -138,7 +137,9 @@ function TargetsView({
     push.mutate({ ...pushArgs, dryRun: false, apiKey: getConfig().ramApiKey })
   }
 
-  function exportExcel() {
+  async function exportExcel() {
+    // xlsx lazy geladen: houdt het uit de initiële bundle (~800KB besparing).
+    const XLSX = await import('xlsx')
     // Detail: zelfde sortering als de tabel; respecteert de actieve filters.
     const detail = [...filtered].sort(
       (a, b) =>

@@ -22,6 +22,7 @@ import { BudgetTargets } from '@/pages/BudgetTargets'
 import { AuditTrail } from '@/pages/_placeholders/AuditTrail'
 import { DecisionLog } from '@/pages/_placeholders/DecisionLog'
 import { ApprovalRules } from '@/pages/_placeholders/ApprovalRules'
+import { Findings } from '@/pages/findings/Findings'
 import { DisplacementReporting } from '@/pages/displacement/DisplacementReporting'
 import { DisplacementMonthly } from '@/pages/displacement/DisplacementMonthly'
 import { DisplacementDepartures } from '@/pages/displacement/DisplacementDepartures'
@@ -42,6 +43,9 @@ export function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route index element={<Home />} />
+
+            {/* Findings — RAM API v2 worklist (eerste v2-pagina) */}
+            <Route path="findings" element={<Findings />} />
 
             {/* Flight Optimization */}
             <Route path="flight-overview" element={<FlightOverview />} />

@@ -85,6 +85,11 @@ RAM_API_HEALTH_ENDPOINT=/health
 
 ## Gotchas uit eerdere sessies
 
+**Dev auth bypass:**
+- `VITE_DEV_NO_AUTH=true` slaat `AuthGate` over in dev (voor visuele tests van
+  v2-pagina's zonder live Entra-sessie). **NOOIT** in productie of CI zetten —
+  Vite bakt env-vars build-time in, dus een prod-build met deze vlaag = geen auth.
+
 **React Router v7:**
 - Library mode gebruiken, niet framework mode. Geen `loader`-functies.
 - `<NavLink>` heeft ingebouwde `isActive` — gebruik dat, niet `useLocation` matching.
@@ -399,3 +404,36 @@ en hidden-section arrays. Geen zorgen voor Fase 1.
 worden als de data al geladen is (dat zou de TanStack Query cache verliezen
 en bij herstel opnieuw laden). Gebruik `display: none` via Tailwind `hidden`
 class, niet conditional rendering met `&&`.
+
+## RAM API v2 Integration
+
+### Stack additions (Sprint 1 — foundation)
+- shadcn/ui — component primitives (table, dialog, toast, tabs etc.)
+  — **DEFERRED**: pending shadcn 2.x-vs-4.x version decision (zie rapport). Niet geïnstalleerd.
+- @tanstack/react-virtual — virtualized lists for large datasets
+- ky — fetch wrapper (retries, timeouts, cancellation)
+- date-fns — date formatting for departure dates, booking curves
+
+### Architecture layers
+1. `src/types/api.ts` — shared envelope types (PagedResult, ApiError)
+2. `src/types/v2/[resource].ts` — per-resource DTO types
+3. `src/api/client.ts` — shared ky-based client (X-Api-Key, base URL, typed errors)
+4. `src/api/v2/[resource].ts` — per-resource fetch functions
+5. `src/hooks/use[Resource].ts` — TanStack Query hooks with filters as query keys
+
+### Auth (current)
+X-Api-Key from localStorage (ram_api_config.ramApiKey) or VITE_RAM_API_KEY env var.
+Header: X-Api-Key (not in body, not as query param).
+MSAL bearer token: planned for later phase — RAM API v2 does not yet accept bearer tokens.
+
+### Standard page pattern
+1. Read filters from useSearchParams + persistentStore
+2. Pass filters to useResource(filters) hook (filters in query key)
+3. isPending → <LoadingState> / isError → <ErrorState> / empty → <EmptyState>
+4. Mutations via optimistic hook + <Toaster> feedback
+5. Types from src/types/v2/[resource].ts
+
+### Dev tools
+- VITE_DEV_NO_AUTH=true — skip AuthGate for visual testing without Entra
+- VITE_RAM_API_KEY — API key for dev (use .env.local, never commit)
+- VITE_RAM_API_BASE_URL — override API base URL in dev

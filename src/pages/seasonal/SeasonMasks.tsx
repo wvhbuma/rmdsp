@@ -13,14 +13,14 @@ import { useSeasonalResults } from '@/hooks/useSeasonal'
 import { CABIN_LABELS, MASK_PHASE_COLORS, RBD_ORDER } from '@/config/seasonal'
 import { COLORS } from '@/config/displacement'
 import { formatCurrency, formatNumber } from '@/utils/format'
-import { SectionCard } from '@/components/displacement/SectionCard'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { EChart } from '@/components/displacement/EChart'
 import { PhaseBadge } from '@/components/seasonal/PhaseBadge'
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-} from '@/components/displacement/StateViews'
+} from '@/components/ui/StateViews'
 import { NoSeasonData } from '@/components/seasonal/NoSeasonData'
 
 const ALL = 'all'
