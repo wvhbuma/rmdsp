@@ -24,14 +24,32 @@ import { SelectFilter } from '@/components/seasonal/SelectFilter'
 import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import { SectionCard } from '@/components/displacement/SectionCard'
 
-const ELASTICITY_MONTHS = ['Nov', 'Dec', 'Jan']
+const ELASTICITY_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+]
 
 function makeElasticities(): DestinationConfig['elasticities'] {
   // Prijselasticiteiten zijn negatief (vraag daalt bij prijsstijging).
   return {
-    Nov: { SEA: -1.4, CHT: -1.1, CMF: -0.9, SLP: -0.7 },
-    Dec: { SEA: -1.6, CHT: -1.3, CMF: -1.0, SLP: -0.8 },
-    Jan: { SEA: -1.2, CHT: -1.0, CMF: -0.8, SLP: -0.6 },
+    Jan: { SEA: -1.2, CHT: -0.7, CMF: -0.6, SLP: -0.4 },
+    Feb: { SEA: -1.2, CHT: -0.7, CMF: -0.6, SLP: -0.4 },
+    Mar: { SEA: -1.2, CHT: -0.7, CMF: -0.6, SLP: -0.4 },
+    Apr: { SEA: -1.5, CHT: -1.0, CMF: -0.8, SLP: -0.6 },
+    May: { SEA: -1.4, CHT: -0.9, CMF: -0.7, SLP: -0.5 },
+    Jun: { SEA: -1.2, CHT: -0.8, CMF: -0.6, SLP: -0.5 },
+    Jul: { SEA: -1.0, CHT: -0.7, CMF: -0.5, SLP: -0.4 },
+    Aug: { SEA: -1.0, CHT: -0.7, CMF: -0.5, SLP: -0.4 },
+    Sep: { SEA: -1.3, CHT: -0.9, CMF: -0.7, SLP: -0.5 },
+    Oct: { SEA: -1.5, CHT: -1.0, CMF: -0.8, SLP: -0.6 },
   }
 }
 
