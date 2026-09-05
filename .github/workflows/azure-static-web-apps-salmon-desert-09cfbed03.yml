@@ -39,6 +39,7 @@ jobs:
         run: npm run build
         env:
           VITE_RAM_API_BASE_URL: ${{ secrets.VITE_RAM_API_BASE_URL }}
+          VITE_SEASONAL_API_BASE_URL: ${{ secrets.VITE_SEASONAL_API_BASE_URL }}
           VITE_ENTRA_TENANT_NAME: ${{ secrets.VITE_ENTRA_TENANT_NAME }}
           VITE_ENTRA_CLIENT_ID: ${{ secrets.VITE_ENTRA_CLIENT_ID }}
           VITE_ENTRA_AUTHORITY_URL: ${{ secrets.VITE_ENTRA_AUTHORITY_URL }}
