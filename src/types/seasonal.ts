@@ -163,23 +163,53 @@ export interface ProductsResponse {
  */
 export type StartRbdTable = Record<string, Record<string, Partial<Record<ProfileName, string>>>>
 
+export interface ConstraintSet {
+  targetLfCeiling: number
+  maxYieldDecline: number
+  highLfThreshold: number
+  highLfYieldBonus: number
+}
+
+/*
+ * Elasticiteiten, constraints én zone-discounts staan alle drie per maand, zodat
+ * winter en zomer in één config-bestand passen. De app werkt altijd met de
+ * per-maand-vorm; oudere bestanden met een plat blok worden bij het inlezen
+ * uitgevouwen over alle twaalf maanden (normalizeSeasonalConfig).
+ */
 export interface DestinationConfig {
   routes: string[]
   yieldMultiplier: number
   /** Optioneel: oudere config-bestanden hebben dit blok nog niet. */
   startRbds?: StartRbdTable
-  elasticities: Record<string, Record<CabinCode, number>> // month → cabin → ε
-  constraints: {
-    targetLfCeiling: number
-    maxYieldDecline: number
-    highLfThreshold: number
-    highLfYieldBonus: number
-  }
-  zoneDiscounts: Record<CabinCode, number>
+  /** maand → cabine → ε */
+  elasticities: Record<string, Record<CabinCode, number>>
+  /** maand → constraints */
+  constraints: Record<string, ConstraintSet>
+  /** maand → cabine → factor */
+  zoneDiscounts: Record<string, Record<CabinCode, number>>
 }
 
 export interface SeasonalConfig {
   destinations: Record<string, DestinationConfig>
+}
+
+/*
+ * Ruwe vorm zoals hij van schijf of uit een geüpload bestand komt: blokken
+ * kunnen per maand óf plat zijn. Alleen normalizeSeasonalConfig raakt dit type
+ * aan; de rest van de app ziet uitsluitend SeasonalConfig.
+ */
+export interface SeasonalConfigWire {
+  destinations?: Record<
+    string,
+    {
+      routes?: string[]
+      yieldMultiplier?: number
+      startRbds?: StartRbdTable
+      elasticities?: Record<string, unknown>
+      constraints?: Record<string, unknown>
+      zoneDiscounts?: Record<string, unknown>
+    }
+  >
 }
 
 // ── Request payloads ──

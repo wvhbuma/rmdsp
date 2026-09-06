@@ -9,14 +9,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import type { DestinationConfig, SeasonalConfig } from '@/types/seasonal'
+import type {
+  ConstraintSet,
+  DestinationConfig,
+  SeasonalConfig,
+  SeasonalConfigWire,
+} from '@/types/seasonal'
 import {
   CABIN_LABELS,
   CABIN_ORDER,
+  DEFAULT_CONSTRAINTS,
   DEFAULT_START_RBDS,
+  DEFAULT_ZONE_DISCOUNTS,
+  MONTHS,
   NESTED_RBD_ORDER,
   PROFILE_ORDER,
   defaultStartRbds,
+  normalizeSeasonalConfig,
   startRbdOverrides,
 } from '@/config/seasonal'
 import { ROUTE_CONFIG } from '@/config/routes'
@@ -32,21 +41,9 @@ import { SelectFilter } from '@/components/seasonal/SelectFilter'
 import { ConfirmDialog } from '@/components/seasonal/ConfirmDialog'
 import { SectionCard } from '@/components/displacement/SectionCard'
 
-const ELASTICITY_MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-]
-
 function makeElasticities(): DestinationConfig['elasticities'] {
   // Prijselasticiteiten zijn negatief (vraag daalt bij prijsstijging).
+  // Nov/Dec: dal- en piekseizoen, afwijkend van de zomermaanden.
   return {
     Jan: { SEA: -1.2, CHT: -0.7, CMF: -0.6, SLP: -0.4 },
     Feb: { SEA: -1.2, CHT: -0.7, CMF: -0.6, SLP: -0.4 },
@@ -58,7 +55,14 @@ function makeElasticities(): DestinationConfig['elasticities'] {
     Aug: { SEA: -1.0, CHT: -0.7, CMF: -0.5, SLP: -0.4 },
     Sep: { SEA: -1.3, CHT: -0.9, CMF: -0.7, SLP: -0.5 },
     Oct: { SEA: -1.5, CHT: -1.0, CMF: -0.8, SLP: -0.6 },
+    Nov: { SEA: -1.4, CHT: -1.1, CMF: -0.9, SLP: -0.7 },
+    Dec: { SEA: -1.6, CHT: -1.3, CMF: -1.0, SLP: -0.8 },
   }
+}
+
+/** Zelfde waarde voor alle twaalf maanden; per maand aanpasbaar in de UI. */
+function everyMonth<T>(value: T): Record<string, T> {
+  return Object.fromEntries(MONTHS.map((m) => [m, { ...value }]))
 }
 
 function makeDestination(market: string, yieldMultiplier: number): DestinationConfig {
@@ -69,13 +73,8 @@ function makeDestination(market: string, yieldMultiplier: number): DestinationCo
     // per cabine) kunnen in het config-bestand worden toegevoegd.
     startRbds: { '*': { '*': { ...DEFAULT_START_RBDS } } },
     elasticities: makeElasticities(),
-    constraints: {
-      targetLfCeiling: 0.95,
-      maxYieldDecline: 0.15,
-      highLfThreshold: 0.9,
-      highLfYieldBonus: 0.1,
-    },
-    zoneDiscounts: { SEA: 1.0, CHT: 0.95, CMF: 0.9, SLP: 0.85 },
+    constraints: everyMonth(DEFAULT_CONSTRAINTS),
+    zoneDiscounts: everyMonth(DEFAULT_ZONE_DISCOUNTS),
   }
 }
 
@@ -104,6 +103,22 @@ function elasticityMeaning(e: number): Meaning {
   if (a < 1.2) return { label: 'Average', cls: 'text-rm-gray' }
   if (a < 1.8) return { label: 'Elastic', cls: 'text-lf-orange' }
   return { label: 'Very elastic', cls: 'text-villain' }
+}
+
+/*
+ * Twaalf maanden los invullen is werk; deze knop kopieert de zichtbare maand
+ * naar alle andere. Handig als een instelling seizoensonafhankelijk is.
+ */
+function CopyToAllMonths({ label, onApply }: { label: string; onApply: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onApply}
+      className="mt-3 font-body text-xs text-es-blue hover:underline"
+    >
+      {label}
+    </button>
+  )
 }
 
 /*
@@ -139,7 +154,7 @@ function StartRbdOverrides({ dest }: { dest: DestinationConfig }) {
 }
 
 const CONSTRAINT_FIELDS: {
-  key: keyof DestinationConfig['constraints']
+  key: keyof ConstraintSet
   label: string
   step: number
 }[] = [
@@ -162,7 +177,9 @@ export function SeasonSettings() {
   const [config, setConfig] = useState<SeasonalConfig>(() => clone(DEFAULT_CONFIG))
   const destinations = Object.keys(config.destinations)
   const [activeDest, setActiveDest] = useState<string>(destinations[0] ?? '')
-  const [month, setMonth] = useState<string>(ELASTICITY_MONTHS[0])
+  // Eén maandkiezer voor de hele pagina: elasticiteiten, constraints én
+  // zone-discounts staan alle drie per maand.
+  const [month, setMonth] = useState<string>(MONTHS[0])
   const [confirmRerun, setConfirmRerun] = useState(false)
   const [loadMsg, setLoadMsg] = useState('')
   // Snapshot van de laatst op de server opgeslagen config (JSON), om "dirty" te
@@ -277,12 +294,15 @@ export function SeasonSettings() {
     const reader = new FileReader()
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(String(reader.result)) as SeasonalConfig
+        const parsed = JSON.parse(String(reader.result)) as SeasonalConfigWire
         if (parsed && typeof parsed === 'object' && parsed.destinations) {
-          // Een handmatig geladen bestand wint van de server-config.
+          // Een handmatig geladen bestand wint van de server-config. Normaliseren
+          // zodat een ouder bestand met platte constraints/zoneDiscounts hier
+          // meteen de per-maand-vorm krijgt.
           configApplied.current = true
-          setConfig(parsed)
-          const keys = Object.keys(parsed.destinations)
+          const loaded = normalizeSeasonalConfig(parsed)
+          setConfig(loaded)
+          const keys = Object.keys(loaded.destinations)
           if (keys.length > 0 && !keys.includes(activeDest)) setActiveDest(keys[0])
           setLoadMsg(`Config loaded from ${file.name}`)
         } else {
@@ -362,7 +382,16 @@ export function SeasonSettings() {
         </div>
       </header>
 
-      <DestinationTabs destinations={destinations} active={activeDest} onSelect={setActiveDest} />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <DestinationTabs destinations={destinations} active={activeDest} onSelect={setActiveDest} />
+        <SelectFilter label="Month" value={month} onChange={setMonth}>
+          {MONTHS.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </SelectFilter>
+      </div>
 
       {dest && (
         <>
@@ -434,19 +463,7 @@ export function SeasonSettings() {
             <StartRbdOverrides dest={dest} />
           </SectionCard>
 
-          <SectionCard
-            title="Elasticities"
-            subtitle="Price elasticity (ε) per cabin"
-            actions={
-              <SelectFilter label="Month" value={month} onChange={setMonth}>
-                {ELASTICITY_MONTHS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </SelectFilter>
-            }
-          >
+          <SectionCard title="Elasticities" subtitle={`Price elasticity (ε) per cabin — ${month}`}>
             <table className="w-full border-collapse text-left font-body text-[13px]">
               <thead>
                 <tr className="bg-rm-gray-light text-rm-dark">
@@ -485,7 +502,7 @@ export function SeasonSettings() {
             </table>
           </SectionCard>
 
-          <SectionCard title="Constraints">
+          <SectionCard title="Constraints" subtitle={month}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {CONSTRAINT_FIELDS.map((f) => (
                 <div key={f.key} className="rounded-lg border border-rm-border bg-rm-bg p-3">
@@ -493,22 +510,37 @@ export function SeasonSettings() {
                     {f.label}
                   </div>
                   <NumberInput
-                    value={dest.constraints[f.key]}
+                    value={dest.constraints[month]?.[f.key] ?? DEFAULT_CONSTRAINTS[f.key]}
                     step={f.step}
                     min={0}
                     onChange={(v) =>
                       updateActive((d) => ({
                         ...d,
-                        constraints: { ...d.constraints, [f.key]: v },
+                        constraints: {
+                          ...d.constraints,
+                          [month]: {
+                            ...(d.constraints[month] ?? DEFAULT_CONSTRAINTS),
+                            [f.key]: v,
+                          },
+                        },
                       }))
                     }
                   />
                 </div>
               ))}
             </div>
+            <CopyToAllMonths
+              label="Apply these constraints to all months"
+              onApply={() =>
+                updateActive((d) => ({
+                  ...d,
+                  constraints: everyMonth(d.constraints[month] ?? DEFAULT_CONSTRAINTS),
+                }))
+              }
+            />
           </SectionCard>
 
-          <SectionCard title="Zone / sharing discounts" subtitle="Factor per cabin">
+          <SectionCard title="Zone / sharing discounts" subtitle={`Factor per cabin — ${month}`}>
             <table className="w-full border-collapse text-left font-body text-[13px]">
               <thead>
                 <tr className="bg-rm-gray-light text-rm-dark">
@@ -519,7 +551,7 @@ export function SeasonSettings() {
               </thead>
               <tbody>
                 {CABIN_ORDER.map((c) => {
-                  const factor = dest.zoneDiscounts[c]
+                  const factor = dest.zoneDiscounts[month]?.[c] ?? DEFAULT_ZONE_DISCOUNTS[c]
                   const discountPct = Math.round((1 - factor) * 100)
                   return (
                     <tr key={c} className="border-t border-rm-border">
@@ -533,7 +565,13 @@ export function SeasonSettings() {
                           onChange={(v) =>
                             updateActive((d) => ({
                               ...d,
-                              zoneDiscounts: { ...d.zoneDiscounts, [c]: v },
+                              zoneDiscounts: {
+                                ...d.zoneDiscounts,
+                                [month]: {
+                                  ...(d.zoneDiscounts[month] ?? DEFAULT_ZONE_DISCOUNTS),
+                                  [c]: v,
+                                },
+                              },
                             }))
                           }
                         />
@@ -544,6 +582,15 @@ export function SeasonSettings() {
                 })}
               </tbody>
             </table>
+            <CopyToAllMonths
+              label="Apply these discounts to all months"
+              onApply={() =>
+                updateActive((d) => ({
+                  ...d,
+                  zoneDiscounts: everyMonth(d.zoneDiscounts[month] ?? DEFAULT_ZONE_DISCOUNTS),
+                }))
+              }
+            />
           </SectionCard>
         </>
       )}

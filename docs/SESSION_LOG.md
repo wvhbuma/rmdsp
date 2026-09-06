@@ -56,10 +56,43 @@ met vier verschillende inhouden.
 Gedragsneutraal bij de huidige config: de `*`/`*`-waarden zijn gelijk aan de oude
 hardcoded map.
 
+### Stap 1b — winter + zomer samengevoegd, alles per maand
+- `seasonal-config-summer.json` en `-winter.json` samengevoegd tot één
+  `seasonal-config.json` met alle twaalf maanden. Zomer wint bij overlap
+  (januari — de enige maand die in beide stond). Bronbestanden + `kopie` naar
+  `0. Archive/`; er is nu nog exact één config-bestand.
+- **Constraints en zoneDiscounts zijn nu ook per maand**, net als de
+  elasticiteiten. Daarmee passen winter en zomer in één bestand: Paris/Milan
+  krijgen in nov/dec `maxYieldDecline 0.15`, `highLfThreshold 0.9`,
+  `highLfYieldBonus 0.1` en afwijkende zone-factoren; jan–okt houdt de
+  zomerwaarden.
+- `config.py`: gedeelde parsers `expand_monthly()`, `build_monthly_overrides()`,
+  `normalize_constraints()`, `month_key_to_int()`, `resolve_zone_discount()`.
+  Zowel de per-maand-vorm als de oude platte vorm wordt gelezen — een plat blok
+  geldt dan voor alle twaalf maanden, zodat een eerder geëxporteerd
+  config-bestand blijft werken.
+- `targets.py`: `_resolve_constraints()` resolvet nu óók `high_lf_threshold` en
+  `high_lf_yield_bonus` per maand; die stonden vast op de dataclass-waarde
+  terwijl ze de schakelaar zijn tussen mode A (volumegroei) en mode B
+  (yieldgroei).
+- `simulation.py`: zone-discount komt per departure-maand × cabine binnen in
+  plaats van uit de module-globale `ZONE_DISCOUNT_FACTORS`. `_apply_overrides`
+  muteert die global niet meer — dat lekte tussen runs door.
+- `SeasonConfig.zone_discounts` toegevoegd; `simulate_season()` neemt hem als
+  derde argument.
+- Frontend: `normalizeSeasonalConfig()` vouwt platte blokken uit naar twaalf
+  maanden, aangeroepen in `getConfig()` én bij handmatige upload. Settings heeft
+  één maandkiezer bovenaan die elasticiteiten, constraints én zone-discounts
+  stuurt, met per sectie een "apply to all months"-knop. NewSeason toont de
+  waarden van de startmaand, met maandlabel in de kop.
+
 ### Openstaand
-- `seasonal-config-summer.json` / `-winter.json` in de projectroot worden nu
-  nergens meer gelezen, maar staan er nog. Analyse-scripts printen nog
-  "COPY-PASTE → seasonal-config-summer.json".
+- Analyse-scripts (`analyze_elasticity_*.py`, `zone_discount_analyzer.py`,
+  `analyze_summer_config.py`) printen nog "COPY-PASTE → seasonal-config-summer.json"
+  met een plat constraints/zoneDiscounts-blok. Dat parseert nog (platte vorm
+  wordt geaccepteerd) maar overschrijft dan álle twaalf maanden — inclusief de
+  winterwaarden. Bewust niet half aangepast: die output moet naar de
+  per-maand-vorm.
 - `ES_ROUTES` is een module-level dict; `_apply_overrides` muteert die instanties
   (bestond al voor `yield_multiplier`). Waarden kunnen tussen runs blijven hangen
   voor bestemmingen die niet in het seizoen zitten.
