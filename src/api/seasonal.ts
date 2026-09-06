@@ -9,6 +9,7 @@
  * parameters, zodat ze direct als TanStack `mutationFn` bruikbaar zijn.
  */
 import { SEASONAL_API_BASE_URL } from '@/config/env'
+import { normalizeSeasonalConfig } from '@/config/seasonal'
 import type {
   DiscoverResponse,
   ImplementArgs,
@@ -17,6 +18,7 @@ import type {
   ProductsResponse,
   RunPipelineArgs,
   SeasonalConfig,
+  SeasonalConfigWire,
   SeasonalResults,
   SeasonalSession,
   SeasonalSessionInfo,
@@ -67,7 +69,6 @@ export function runPipeline({
   routes,
   start,
   end,
-  config,
   profileAssignments,
 }: RunPipelineArgs): Promise<PipelineResponse> {
   return postJson<PipelineResponse>('/api/seasonal/run', {
@@ -75,7 +76,6 @@ export function runPipeline({
     routes,
     start,
     end,
-    config,
     profile_assignments: profileAssignments,
   })
 }
@@ -117,7 +117,9 @@ export async function fetchSessionResults(
 export async function getConfig(): Promise<SeasonalConfig> {
   const res = await fetch(`${BASE}/api/seasonal/config`)
   if (!res.ok) throw new Error('Failed to load config')
-  return (await res.json()) as SeasonalConfig
+  // Normaliseren zodat de rest van de app altijd de per-maand-vorm ziet, ook bij
+  // een ouder config-bestand met platte constraints/zoneDiscounts.
+  return normalizeSeasonalConfig((await res.json()) as SeasonalConfigWire)
 }
 
 export async function saveConfig(config: SeasonalConfig): Promise<void> {

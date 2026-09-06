@@ -583,6 +583,8 @@ function DetailTable({ targets }: { targets: SeasonalTarget[] }) {
             <th className="px-3 py-2 text-left font-display font-semibold">DOW</th>
             <th className="px-3 py-2 text-left font-display font-semibold">Route</th>
             <th className="px-3 py-2 text-left font-display font-semibold">Cabin</th>
+            <th className="px-3 py-2 text-left font-display font-semibold">Profile</th>
+            <th className="px-3 py-2 text-left font-display font-semibold">Start RBD</th>
             {INDEX_HEAD.map((h) => (
               <th key={h} className="px-3 py-2 text-right font-display font-semibold">
                 {h}
@@ -599,6 +601,8 @@ function DetailTable({ targets }: { targets: SeasonalTarget[] }) {
               <td className="px-3 py-1.5 text-left text-rm-gray">
                 {CABIN_LABELS[t.modelCabin] ?? t.modelCabin}
               </td>
+              <td className="px-3 py-1.5 text-left text-rm-gray">{t.profile}</td>
+              <td className="px-3 py-1.5 text-left font-medium text-rm-dark">{t.startRbd}</td>
               <IndexCells r={rowFromTarget(t)} />
             </tr>
           ))}

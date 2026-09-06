@@ -5,6 +5,150 @@ datum, wat gedaan, issues die we tegenkwamen, oplossingen.
 
 ---
 
+## Sessie — 2026-09-06 — Start-RBD per route + één config-pad
+
+**Doel:** de start-RBD van de seizoensmaskers instelbaar maken per route (stap 2),
+na eerst het configuratiepad te consolideren (stap 1). Stap 3 (EMSR-b-allocatie
+i.p.v. vaste profielpercentages) is besproken maar bewust NIET gebouwd.
+
+Branch: `claude/start-rbd-per-route`. Raakt ook `~/Seasonal Planning/` (Python,
+geen git-repo — backup van de gewijzigde bestanden staat in de scratchpad).
+
+### Uitgangssituatie
+Start-RBD was hardcoded op één plek: `server.py`, `{"High":"D","Med":"C","Low":"B"}`,
+zonder route-dimensie. Daarnaast twee config-paden (Settings stuurde de config
+inline mee, de wizard liet de server van schijf lezen) en zes config-bestanden
+met vier verschillende inhouden.
+
+### Stap 1 — één config-pad
+- `server.py`: `CONFIG_PATH` van `seasonal-config-summer.json` → `seasonal-config.json`
+  (die twee waren byte-identiek, dus gedragsneutraal).
+- `seasonal-config.json` aangevuld met Nov + Dec elasticiteiten per bestemming
+  (overgenomen uit `seasonal-config-winter.json`). Zonder die maanden vielen
+  winterruns stilzwijgend terug op de hardcoded defaults in `build_es_season`,
+  waardoor Nov/Dec uit code kwamen en Jan uit config.
+- Frontend: `RunPipelineArgs.config` verwijderd; Settings stuurt de config niet
+  meer inline mee. De run draait nu in de `onSuccess` van de save — parallel
+  afvuren kon de pipeline de oude versie van schijf laten lezen.
+- `NewSeason` toont vóór de run read-only welke config gaat gelden, met link naar
+  Settings.
+- Stale kopieën gearchiveerd naar `0. Archive/`: `seasonal_planner/server.py`
+  (dode 746-regel kopie die zelf naar een ánder config-bestand wees) en de twee
+  `seasonal_planner/seasonal-config*.json`.
+
+### Stap 2 — start-RBD per route × cabine × profiel
+- Config-vorm in `seasonal-config.json`, met `"*"` als wildcard op beide assen:
+  `"startRbds": {"*": {"*": {"High":"D","Med":"C","Low":"B"}}}`.
+  Resolutie: `[route][cabine]` → `[route]["*"]` → `["*"][cabine]` → `["*"]["*"]`
+  → `DEFAULT_START_RBDS`.
+- `config.py`: veld `RouteConfig.start_rbds` + `parse_start_rbds()` +
+  `resolve_start_rbd()` + `DEFAULT_START_RBDS`. Ongeldige RBD's worden gelogd en
+  genegeerd i.p.v. stil op "B" te vallen.
+- `server.py`: `_apply_overrides` vult `start_rbds` per route (analoog aan
+  `yield_multiplier`); de profile-assignment-loop gebruikt de resolver.
+- `targets.py`: `apply_route_start_rbds()` — één chokepoint, aangeroepen in
+  `pipeline.compute_targets()` ná `assign_profiles`. Dekt óók de auto-rule- en
+  fallback-paden, die anders route-blind zouden blijven.
+- Frontend: `StartRbdTable`-type, Start-RBD-sectie in Settings (per profiel, met
+  "closed below"-kolom), read-only weergave van fijnmazigere overrides uit het
+  config-bestand, en Profile/Start RBD-kolommen in SeasonTargets.
+
+Gedragsneutraal bij de huidige config: de `*`/`*`-waarden zijn gelijk aan de oude
+hardcoded map.
+
+### Stap 1b — winter + zomer samengevoegd, alles per maand
+- `seasonal-config-summer.json` en `-winter.json` samengevoegd tot één
+  `seasonal-config.json` met alle twaalf maanden. Zomer wint bij overlap
+  (januari — de enige maand die in beide stond). Bronbestanden + `kopie` naar
+  `0. Archive/`; er is nu nog exact één config-bestand.
+- **Constraints en zoneDiscounts zijn nu ook per maand**, net als de
+  elasticiteiten. Daarmee passen winter en zomer in één bestand: Paris/Milan
+  krijgen in nov/dec `maxYieldDecline 0.15`, `highLfThreshold 0.9`,
+  `highLfYieldBonus 0.1` en afwijkende zone-factoren; jan–okt houdt de
+  zomerwaarden.
+- `config.py`: gedeelde parsers `expand_monthly()`, `build_monthly_overrides()`,
+  `normalize_constraints()`, `month_key_to_int()`, `resolve_zone_discount()`.
+  Zowel de per-maand-vorm als de oude platte vorm wordt gelezen — een plat blok
+  geldt dan voor alle twaalf maanden, zodat een eerder geëxporteerd
+  config-bestand blijft werken.
+- `targets.py`: `_resolve_constraints()` resolvet nu óók `high_lf_threshold` en
+  `high_lf_yield_bonus` per maand; die stonden vast op de dataclass-waarde
+  terwijl ze de schakelaar zijn tussen mode A (volumegroei) en mode B
+  (yieldgroei).
+- `simulation.py`: zone-discount komt per departure-maand × cabine binnen in
+  plaats van uit de module-globale `ZONE_DISCOUNT_FACTORS`. `_apply_overrides`
+  muteert die global niet meer — dat lekte tussen runs door.
+- `SeasonConfig.zone_discounts` toegevoegd; `simulate_season()` neemt hem als
+  derde argument.
+- Frontend: `normalizeSeasonalConfig()` vouwt platte blokken uit naar twaalf
+  maanden, aangeroepen in `getConfig()` én bij handmatige upload. Settings heeft
+  één maandkiezer bovenaan die elasticiteiten, constraints én zone-discounts
+  stuurt, met per sectie een "apply to all months"-knop. NewSeason toont de
+  waarden van de startmaand, met maandlabel in de kop.
+
+### Stap 3 — EMSR-b allocatie
+Keuzes van Wolter: μ uit de profielpercentages (geherschaald over de open
+klassen), geschaald op **capaciteit**, σ = √μ (Poisson).
+
+- `masks.py`: `_emsrb_booking_limits()` implementeert EMSR-b (Belobaba). Per
+  klasse k wordt beschermd voor de klassen erboven:
+  `y_k = μ_agg + z·σ_agg` met `z = Φ⁻¹(1 − f_k/f̄)`, booking limit = capaciteit − y_k.
+  `Φ⁻¹` via `statistics.NormalDist` — geen nieuwe dependency.
+  `_demand_per_class()` herschaalt de profielshares over de open klassen, zodat
+  de te verdelen stoelen volledig tussen start-RBD en hoogste klasse landen.
+- Booking limits worden teruggerekend naar incrementele protections, zodat de
+  bestaande nesting-loop dezelfde AU_cum oplevert. Schema onveranderd: DB, de
+  push naar RAM en de charts hoefden niet mee.
+- Schakelbaar per bestemming: `"allocation": {"method": "emsrb"|"profile",
+  "demandBasis": "capacity"|"target"}`. Code-default is `profile`, zodat een
+  ouder config-bestand niet ineens van model wisselt; `seasonal-config.json`
+  staat op `emsrb`. Settings heeft een Allocation-kaart om te wisselen.
+- Zone-discounts spelen geen rol in EMSR-b: uniform per cabine, dus ze vallen weg
+  in de verhouding `f_k/f̄`.
+
+**Gevalideerd:** twee handberekeningen (2 en 3 klassen) exact gereproduceerd;
+Σ protections == capaciteit; AU(J) == capaciteit; gesloten klassen AU 0; AU_cum
+monotoon dalend; `protection == AU-verschil met de klasse eronder`; randgevallen
+(geen vraag boven, vlakke ladder, één klasse, leeg, extreme vraag).
+
+**Bevinding — lees dit vóór je hem op een echt seizoen zet.** Bij vraagbasis =
+capaciteit (μ_totaal == capaciteit) verdeelt EMSR-b méér capaciteit naar de lage
+klassen dan de profielladder: AU(C) 12 vs 18, C+D samen 40% van de capaciteit
+tegen 30% bij het profiel. In de bottom-up fill-simulatie levert dat ~12% lagere
+sim-revenue. EMSR-b wordt pas strakker dan het profiel als de vraag de capaciteit
+overstijgt (μ/cap ≥ 1,2 → AU(C) = 2; μ/cap ≥ 1,5 → C dicht).
+
+Twee oorzaken, allebei in de aannames en niet in de implementatie:
+1. `au_distribution` in de profielen is ooit handmatig getuned als AU-ladder,
+   niet als vraagvoorspelling. Als μ lezen we hem als "20% van de vraag zit in
+   klasse E" — dat is nooit gekalibreerd.
+2. `simulate_fill` verkoopt de target-units bottom-up zonder betalingsbereidheid;
+   spill en recapture bestaan er niet. Strakker onderin scoort daar dus altijd
+   beter. De simulatie is daarmee geen eerlijke scheidsrechter tussen twee
+   allocatiemodellen.
+
+### Openstaand
+- **EMSR-b evalueren op echte data** (Wolter). Vergelijk `profile` vs `emsrb` op
+  één seizoen. Overweeg `demandBasis: "target"` — dan zet EMSR-b vraag tegenover
+  capaciteit zoals bedoeld, in plaats van vraag == capaciteit aan te nemen.
+- De echte volgende stap voor EMSR-b is μ uit PY-boekingen per RBD
+  (`BookingPassengers.RBD`, mét unconstraining) in plaats van de profielmix.
+  Zolang μ een handgetunede aanname is, optimaliseert EMSR-b tegen die aanname.
+- Analyse-scripts (`analyze_elasticity_*.py`, `zone_discount_analyzer.py`,
+  `analyze_summer_config.py`) printen nog "COPY-PASTE → seasonal-config-summer.json"
+  met een plat constraints/zoneDiscounts-blok. Dat parseert nog (platte vorm
+  wordt geaccepteerd) maar overschrijft dan álle twaalf maanden — inclusief de
+  winterwaarden. Bewust niet half aangepast: die output moet naar de
+  per-maand-vorm.
+- `ES_ROUTES` is een module-level dict; `_apply_overrides` muteert die instanties
+  (bestond al voor `yield_multiplier`). Waarden kunnen tussen runs blijven hangen
+  voor bestemmingen die niet in het seizoen zitten.
+- Stap 3: EMSR-b. Open keuzes: μ-bron (PY per RBD via `BookingPassengers.RBD`,
+  mét unconstraining, vs. profielpercentages als prior), verdelen op capaciteit
+  of op target-vraag, en de σ-aanname.
+
+---
+
 ## Sessie — 2026-06-02 — Multi-Leg Displacement Analysis
 
 **Doel:** nieuwe nav-groep "Multi-Leg Analysis" met 3 pagina's (Displacement

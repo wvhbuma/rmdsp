@@ -153,21 +153,79 @@ export interface ProductsResponse {
 }
 
 // ── Config ──
+
+/*
+ * Start-RBD (laagste open bucket) per route → cabine → profiel. "*" is de
+ * wildcard op beide assen; de resolutie loopt van specifiek naar algemeen:
+ *   [route][cabine] → [route]["*"] → ["*"][cabine] → ["*"]["*"] → default
+ * De UI vult vandaag alleen de "*"/"*"-regel; de overige lagen staan klaar voor
+ * sturing per richting en per cabine.
+ */
+export type StartRbdTable = Record<string, Record<string, Partial<Record<ProfileName, string>>>>
+
+export interface ConstraintSet {
+  targetLfCeiling: number
+  maxYieldDecline: number
+  highLfThreshold: number
+  highLfYieldBonus: number
+}
+
+/*
+ * Elasticiteiten, constraints én zone-discounts staan alle drie per maand, zodat
+ * winter en zomer in één config-bestand passen. De app werkt altijd met de
+ * per-maand-vorm; oudere bestanden met een plat blok worden bij het inlezen
+ * uitgevouwen over alle twaalf maanden (normalizeSeasonalConfig).
+ */
+export type AllocationMethod = 'profile' | 'emsrb'
+export type DemandBasis = 'capacity' | 'target'
+
+/*
+ * Hoe de stoelen tussen de start-RBD en de hoogste klasse verdeeld worden.
+ * "profile" = vaste percentages uit het High/Med/Low-profiel; "emsrb" = het
+ * profiel levert alleen de vraagmix, fare-ladder en schaarste bepalen de
+ * beschermingsniveaus.
+ */
+export interface AllocationConfig {
+  method: AllocationMethod
+  demandBasis: DemandBasis
+}
+
 export interface DestinationConfig {
   routes: string[]
   yieldMultiplier: number
-  elasticities: Record<string, Record<CabinCode, number>> // month → cabin → ε
-  constraints: {
-    targetLfCeiling: number
-    maxYieldDecline: number
-    highLfThreshold: number
-    highLfYieldBonus: number
-  }
-  zoneDiscounts: Record<CabinCode, number>
+  /** Optioneel: oudere config-bestanden hebben dit blok nog niet. */
+  startRbds?: StartRbdTable
+  allocation: AllocationConfig
+  /** maand → cabine → ε */
+  elasticities: Record<string, Record<CabinCode, number>>
+  /** maand → constraints */
+  constraints: Record<string, ConstraintSet>
+  /** maand → cabine → factor */
+  zoneDiscounts: Record<string, Record<CabinCode, number>>
 }
 
 export interface SeasonalConfig {
   destinations: Record<string, DestinationConfig>
+}
+
+/*
+ * Ruwe vorm zoals hij van schijf of uit een geüpload bestand komt: blokken
+ * kunnen per maand óf plat zijn. Alleen normalizeSeasonalConfig raakt dit type
+ * aan; de rest van de app ziet uitsluitend SeasonalConfig.
+ */
+export interface SeasonalConfigWire {
+  destinations?: Record<
+    string,
+    {
+      routes?: string[]
+      yieldMultiplier?: number
+      startRbds?: StartRbdTable
+      allocation?: Partial<AllocationConfig>
+      elasticities?: Record<string, unknown>
+      constraints?: Record<string, unknown>
+      zoneDiscounts?: Record<string, unknown>
+    }
+  >
 }
 
 // ── Request payloads ──
@@ -179,12 +237,16 @@ export interface ProfileAssignment {
   profile: ProfileName
 }
 
+/*
+ * Geen `config` meer: de server leest de configuratie altijd van schijf
+ * (seasonal-config.json). Settings is de enige schrijver — zie
+ * SeasonSettings.reRunWithSettings.
+ */
 export interface RunPipelineArgs {
   name: string
   routes: string[]
   start: string
   end: string
-  config?: Partial<SeasonalConfig>
   profileAssignments?: ProfileAssignment[]
 }
 

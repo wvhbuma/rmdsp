@@ -6,12 +6,13 @@
  */
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import {
   useDiscoverRoutes,
   useRunPipeline,
+  useSeasonalConfig,
   useSeasonalProducts,
   useSeasonalSessions,
 } from '@/hooks/useSeasonal'
@@ -25,7 +26,13 @@ import type {
   SeasonalSession,
 } from '@/types/seasonal'
 import { cabinLabel } from '@/config/displacement'
-import { PROFILE_COLORS } from '@/config/seasonal'
+import {
+  ALLOCATION_LABELS,
+  MONTHS,
+  PROFILE_COLORS,
+  formatDefaultStartRbds,
+  monthNameOf,
+} from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { ProgressSteps } from '@/components/seasonal/ProgressSteps'
 import { SectionCard } from '@/components/displacement/SectionCard'
@@ -789,6 +796,8 @@ function StepPipeline({
         <Recap label="Routes" value={selected.join(', ') || '—'} />
       </dl>
 
+      <ActiveConfigRecap routes={selected} start={start} />
+
       {status === 'pending' && <LoadingState label="Pipeline running…" />}
       {status === 'error' && (
         <ErrorState
@@ -811,6 +820,70 @@ function StepPipeline({
         )}
       </div>
     </SectionCard>
+  )
+}
+
+/*
+ * Toont welke configuratie deze run gaat gebruiken. Er is één config-pad: de
+ * server leest seasonal-config.json van schijf en Settings is de enige plek waar
+ * die wordt gewijzigd. Hier dus read-only — puur zodat je vóór het draaien ziet
+ * wat er geldt.
+ */
+function ActiveConfigRecap({ routes, start }: { routes: string[]; start: string }) {
+  const configQuery = useSeasonalConfig()
+  // Constraints staan per maand; we tonen die van de startmaand. De rest van het
+  // seizoen kan afwijken — vandaar het maandlabel in de kop.
+  const month = monthNameOf(start) || MONTHS[0]
+
+  const active = useMemo(() => {
+    const dests = configQuery.data?.destinations
+    if (!dests) return []
+    return Object.entries(dests).filter(([, d]) => (d.routes ?? []).some((r) => routes.includes(r)))
+  }, [configQuery.data, routes])
+
+  if (configQuery.isPending || configQuery.isError || active.length === 0) return null
+
+  return (
+    <div className="mb-4 rounded-lg border border-rm-border bg-rm-bg p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="font-display text-[11px] uppercase tracking-wide text-rm-gray">
+          Settings used for this run — showing {month}
+        </span>
+        <Link to="/season/settings" className="font-body text-xs text-es-blue hover:underline">
+          Edit in Settings →
+        </Link>
+      </div>
+      <table className="w-full border-collapse text-left font-body text-[13px]">
+        <thead>
+          <tr className="text-rm-gray">
+            <th className="py-1 pr-3 font-display font-semibold">Destination</th>
+            <th className="py-1 pr-3 font-display font-semibold">Allocation</th>
+            <th className="py-1 pr-3 font-display font-semibold">Yield mult.</th>
+            <th className="py-1 pr-3 font-display font-semibold">LF ceiling</th>
+            <th className="py-1 pr-3 font-display font-semibold">Max yield decline</th>
+            <th className="py-1 font-display font-semibold">Start RBD (High/Med/Low)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {active.map(([destName, d]) => (
+            <tr key={destName} className="border-t border-rm-border">
+              <td className="py-1 pr-3 font-medium text-rm-dark">{destName}</td>
+              <td className="py-1 pr-3 text-rm-gray">
+                {ALLOCATION_LABELS[d.allocation?.method] ?? '—'}
+              </td>
+              <td className="py-1 pr-3 text-rm-gray">{d.yieldMultiplier}</td>
+              <td className="py-1 pr-3 text-rm-gray">
+                {d.constraints?.[month]?.targetLfCeiling ?? '—'}
+              </td>
+              <td className="py-1 pr-3 text-rm-gray">
+                {d.constraints?.[month]?.maxYieldDecline ?? '—'}
+              </td>
+              <td className="py-1 text-rm-gray">{formatDefaultStartRbds(d.startRbds)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
