@@ -1,9 +1,15 @@
-name: Azure Static Web Apps CI/CD
+# Preview-deploy → Azure Static Web App `swa-rmdsp-tst` (ram-rg-rm-tst),
+# https://salmon-desert-09cfbed03.7.azurestaticapps.net
+#
+# Alleen op pull requests naar main. Elke PR krijgt een eigen staging-omgeving op
+# de testomgeving; bij het sluiten van de PR wordt die opgeruimd. Push naar main
+# gaat naar deploy-production.yml.
+#
+# NB: swa-rmdsp-tst zit op het Free-plan, met maximaal drie staging-omgevingen
+# tegelijk. Meer openstaande PR's dan dat → de vierde faalt.
+name: Deploy preview
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -11,11 +17,12 @@ on:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
        contents: read
+       pull-requests: write    # nodig om de preview-URL als PR-comment te plaatsen
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,9 +38,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Oryx (SWA's default builder) runt in een apart container en ziet env-vars
-      # op de deploy-action niet. Daarom bouwen we hier expliciet met env op
-      # step-level, en geven we de al-gebuilde dist/ als app_location mee.
+      # Zelfde split-build als productie: Oryx ziet de env-vars van de
+      # deploy-action niet, dus bouwen we hier expliciet.
+      #
+      # De VITE_*-secrets zijn dezelfde als voor productie — een preview praat dus
+      # met de productie-API en de productie-Entra-app. Wil je dat scheiden, dan
+      # zijn daar aparte secrets voor nodig (en een extra redirect-URI in Entra
+      # voor de staging-hostnames).
       - name: Build App
         run: npm run build
         env:
@@ -44,17 +55,16 @@ jobs:
           VITE_ENTRA_AUTHORITY_URL: ${{ secrets.VITE_ENTRA_AUTHORITY_URL }}
           VITE_ENTRA_USER_FLOW: ${{ secrets.VITE_ENTRA_USER_FLOW }}
 
-      # BEWUST GEEN OIDC. Met github_id_token authenticeert de deploy-actie via de
-      # GitHub-identiteit, en bepaalt Azure de doel-app aan de hand van de SWA die
-      # aan deze repo+branch gekoppeld is — het deployment-token wordt dan
-      # genegeerd. swa-rmdsp-tst is gekoppeld aan wvhbuma/rmdsp@main, dus elke
-      # deploy landde op de testomgeving, ongeacht welk token in de secret stond.
-      # Zonder github_id_token beslist het token, en dat wijst naar productie.
+      # Geen github_id_token, om dezelfde reden als in deploy-production.yml: met
+      # OIDC bepaalt de repo-koppeling in Azure de doel-app en wordt het token
+      # genegeerd. Hier moet het token beslissen, anders landt een preview alsnog
+      # ergens anders.
       - name: Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ES_BUSINESS_PERFORMANCE }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_DESERT_09CFBED03 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}    # plaatst de preview-URL als PR-comment
           action: "upload"
           ###### Repository/Build Configurations ######
           app_location: "dist"    # al-gebuilde static output
@@ -64,7 +74,7 @@ jobs:
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
@@ -72,4 +82,5 @@ jobs:
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_DESERT_09CFBED03 }}
           action: "close"

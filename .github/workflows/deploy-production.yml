@@ -1,0 +1,64 @@
+# Productie-deploy → Azure Static Web App `es-business-performance`
+# (ram-rg-es-prd), bereikbaar op https://reporting.europeansleeper.ram-app.com
+#
+# Alleen op push naar main. Pull requests gaan naar deploy-preview.yml, dat op de
+# testomgeving deployt.
+name: Deploy production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy_job:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    permissions:
+       contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Oryx (SWA's default builder) runt in een apart container en ziet env-vars
+      # op de deploy-action niet. Daarom bouwen we hier expliciet met env op
+      # step-level, en geven we de al-gebuilde dist/ als app_location mee.
+      - name: Build App
+        run: npm run build
+        env:
+          VITE_RAM_API_BASE_URL: ${{ secrets.VITE_RAM_API_BASE_URL }}
+          VITE_SEASONAL_API_BASE_URL: ${{ secrets.VITE_SEASONAL_API_BASE_URL }}
+          VITE_ENTRA_TENANT_NAME: ${{ secrets.VITE_ENTRA_TENANT_NAME }}
+          VITE_ENTRA_CLIENT_ID: ${{ secrets.VITE_ENTRA_CLIENT_ID }}
+          VITE_ENTRA_AUTHORITY_URL: ${{ secrets.VITE_ENTRA_AUTHORITY_URL }}
+          VITE_ENTRA_USER_FLOW: ${{ secrets.VITE_ENTRA_USER_FLOW }}
+
+      # BEWUST GEEN OIDC. Met github_id_token authenticeert de deploy-actie via de
+      # GitHub-identiteit, en bepaalt Azure de doel-app aan de hand van de SWA die
+      # aan deze repo+branch gekoppeld is — het deployment-token wordt dan
+      # genegeerd. swa-rmdsp-tst is gekoppeld aan wvhbuma/rmdsp@main, dus elke
+      # deploy landde op de testomgeving, ongeacht welk token in de secret stond.
+      # Zonder github_id_token beslist het token, en dat wijst naar productie.
+      - name: Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ES_BUSINESS_PERFORMANCE }}
+          action: "upload"
+          ###### Repository/Build Configurations ######
+          app_location: "dist"    # al-gebuilde static output
+          api_location: ""
+          output_location: ""     # niet gebruikt wanneer skip_app_build true is
+          skip_app_build: true    # Oryx skippen; we hebben zelf gebouwd
+          ###### End of Repository/Build Configurations ######
