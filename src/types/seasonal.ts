@@ -176,11 +176,26 @@ export interface ConstraintSet {
  * per-maand-vorm; oudere bestanden met een plat blok worden bij het inlezen
  * uitgevouwen over alle twaalf maanden (normalizeSeasonalConfig).
  */
+export type AllocationMethod = 'profile' | 'emsrb'
+export type DemandBasis = 'capacity' | 'target'
+
+/*
+ * Hoe de stoelen tussen de start-RBD en de hoogste klasse verdeeld worden.
+ * "profile" = vaste percentages uit het High/Med/Low-profiel; "emsrb" = het
+ * profiel levert alleen de vraagmix, fare-ladder en schaarste bepalen de
+ * beschermingsniveaus.
+ */
+export interface AllocationConfig {
+  method: AllocationMethod
+  demandBasis: DemandBasis
+}
+
 export interface DestinationConfig {
   routes: string[]
   yieldMultiplier: number
   /** Optioneel: oudere config-bestanden hebben dit blok nog niet. */
   startRbds?: StartRbdTable
+  allocation: AllocationConfig
   /** maand → cabine → ε */
   elasticities: Record<string, Record<CabinCode, number>>
   /** maand → constraints */
@@ -205,6 +220,7 @@ export interface SeasonalConfigWire {
       routes?: string[]
       yieldMultiplier?: number
       startRbds?: StartRbdTable
+      allocation?: Partial<AllocationConfig>
       elasticities?: Record<string, unknown>
       constraints?: Record<string, unknown>
       zoneDiscounts?: Record<string, unknown>

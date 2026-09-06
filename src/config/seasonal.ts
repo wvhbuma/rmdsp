@@ -6,8 +6,11 @@
  * De seizoen-specifieke maps (RBD, mask-phases, bindings, profielen) staan hier.
  */
 import type {
+  AllocationConfig,
+  AllocationMethod,
   CabinCode,
   ConstraintSet,
+  DemandBasis,
   DestinationConfig,
   ProfileName,
   SeasonalConfig,
@@ -121,6 +124,26 @@ export function monthNameOf(isoDate: string): string {
   return m >= 1 && m <= 12 ? MONTHS[m - 1] : ''
 }
 
+/*
+ * Terugval als de config geen allocation-blok heeft — spiegelt
+ * DEFAULT_ALLOCATION in config.py: het oorspronkelijke profielmodel, zodat een
+ * ouder config-bestand niet ineens van model verandert.
+ */
+export const DEFAULT_ALLOCATION: AllocationConfig = {
+  method: 'profile',
+  demandBasis: 'capacity',
+}
+
+export const ALLOCATION_LABELS: Record<AllocationMethod, string> = {
+  profile: 'Profile percentages',
+  emsrb: 'EMSR-b',
+}
+
+export const DEMAND_BASIS_LABELS: Record<DemandBasis, string> = {
+  capacity: 'Capacity',
+  target: 'Target units',
+}
+
 export const DEFAULT_CONSTRAINTS: ConstraintSet = {
   targetLfCeiling: 0.95,
   maxYieldDecline: 0.15,
@@ -177,6 +200,10 @@ export function normalizeSeasonalConfig(wire: SeasonalConfigWire): SeasonalConfi
       routes: d.routes ?? [],
       yieldMultiplier: d.yieldMultiplier ?? 1.0,
       startRbds: d.startRbds ?? { '*': { '*': { ...DEFAULT_START_RBDS } } },
+      allocation: {
+        method: d.allocation?.method ?? DEFAULT_ALLOCATION.method,
+        demandBasis: d.allocation?.demandBasis ?? DEFAULT_ALLOCATION.demandBasis,
+      },
       elasticities,
       constraints: expandMonthly<ConstraintSet>(d.constraints, DEFAULT_CONSTRAINTS),
       zoneDiscounts: expandMonthly<Record<CabinCode, number>>(

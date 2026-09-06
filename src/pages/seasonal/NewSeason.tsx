@@ -26,7 +26,13 @@ import type {
   SeasonalSession,
 } from '@/types/seasonal'
 import { cabinLabel } from '@/config/displacement'
-import { MONTHS, PROFILE_COLORS, formatDefaultStartRbds, monthNameOf } from '@/config/seasonal'
+import {
+  ALLOCATION_LABELS,
+  MONTHS,
+  PROFILE_COLORS,
+  formatDefaultStartRbds,
+  monthNameOf,
+} from '@/config/seasonal'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { ProgressSteps } from '@/components/seasonal/ProgressSteps'
 import { SectionCard } from '@/components/displacement/SectionCard'
@@ -851,6 +857,7 @@ function ActiveConfigRecap({ routes, start }: { routes: string[]; start: string 
         <thead>
           <tr className="text-rm-gray">
             <th className="py-1 pr-3 font-display font-semibold">Destination</th>
+            <th className="py-1 pr-3 font-display font-semibold">Allocation</th>
             <th className="py-1 pr-3 font-display font-semibold">Yield mult.</th>
             <th className="py-1 pr-3 font-display font-semibold">LF ceiling</th>
             <th className="py-1 pr-3 font-display font-semibold">Max yield decline</th>
@@ -861,6 +868,9 @@ function ActiveConfigRecap({ routes, start }: { routes: string[]; start: string 
           {active.map(([destName, d]) => (
             <tr key={destName} className="border-t border-rm-border">
               <td className="py-1 pr-3 font-medium text-rm-dark">{destName}</td>
+              <td className="py-1 pr-3 text-rm-gray">
+                {ALLOCATION_LABELS[d.allocation?.method] ?? '—'}
+              </td>
               <td className="py-1 pr-3 text-rm-gray">{d.yieldMultiplier}</td>
               <td className="py-1 pr-3 text-rm-gray">
                 {d.constraints?.[month]?.targetLfCeiling ?? '—'}

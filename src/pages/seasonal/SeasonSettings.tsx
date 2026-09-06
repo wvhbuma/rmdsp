@@ -10,15 +10,20 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type {
+  AllocationMethod,
   ConstraintSet,
+  DemandBasis,
   DestinationConfig,
   SeasonalConfig,
   SeasonalConfigWire,
 } from '@/types/seasonal'
 import {
+  ALLOCATION_LABELS,
   CABIN_LABELS,
   CABIN_ORDER,
+  DEFAULT_ALLOCATION,
   DEFAULT_CONSTRAINTS,
+  DEMAND_BASIS_LABELS,
   DEFAULT_START_RBDS,
   DEFAULT_ZONE_DISCOUNTS,
   MONTHS,
@@ -72,6 +77,7 @@ function makeDestination(market: string, yieldMultiplier: number): DestinationCo
     // "*"/"*" = alle routes, alle cabines. Fijnmaziger regels (per richting of
     // per cabine) kunnen in het config-bestand worden toegevoegd.
     startRbds: { '*': { '*': { ...DEFAULT_START_RBDS } } },
+    allocation: { ...DEFAULT_ALLOCATION },
     elasticities: makeElasticities(),
     constraints: everyMonth(DEFAULT_CONSTRAINTS),
     zoneDiscounts: everyMonth(DEFAULT_ZONE_DISCOUNTS),
@@ -406,6 +412,75 @@ export function SeasonSettings() {
               <span className="font-body text-xs text-rm-gray">
                 Routes: {dest.routes.join(', ') || '—'}
               </span>
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Allocation"
+            subtitle="How seats are distributed between the start RBD and the top class"
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-rm-border bg-rm-bg p-3">
+                <div className="mb-2 font-display text-[11px] uppercase tracking-wide text-rm-gray">
+                  Method
+                </div>
+                <select
+                  value={dest.allocation.method}
+                  onChange={(e) =>
+                    updateActive((d) => ({
+                      ...d,
+                      allocation: {
+                        ...d.allocation,
+                        method: e.target.value as AllocationMethod,
+                      },
+                    }))
+                  }
+                  className="w-full rounded-md border border-rm-border bg-white px-2 py-1 font-body text-[13px] text-rm-dark"
+                >
+                  {(Object.keys(ALLOCATION_LABELS) as AllocationMethod[]).map((m) => (
+                    <option key={m} value={m}>
+                      {ALLOCATION_LABELS[m]}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 font-body text-xs text-rm-gray">
+                  {dest.allocation.method === 'emsrb'
+                    ? 'The profile only supplies the demand mix; fare ladder and scarcity set the protection levels (σ = √μ).'
+                    : 'Fixed percentages from the High/Med/Low profile.'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-rm-border bg-rm-bg p-3">
+                <div className="mb-2 font-display text-[11px] uppercase tracking-wide text-rm-gray">
+                  Demand basis
+                </div>
+                <select
+                  value={dest.allocation.demandBasis}
+                  disabled={dest.allocation.method !== 'emsrb'}
+                  onChange={(e) =>
+                    updateActive((d) => ({
+                      ...d,
+                      allocation: {
+                        ...d.allocation,
+                        demandBasis: e.target.value as DemandBasis,
+                      },
+                    }))
+                  }
+                  className="w-full rounded-md border border-rm-border bg-white px-2 py-1 font-body text-[13px] text-rm-dark disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {(Object.keys(DEMAND_BASIS_LABELS) as DemandBasis[]).map((b) => (
+                    <option key={b} value={b}>
+                      {DEMAND_BASIS_LABELS[b]}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 font-body text-xs text-rm-gray">
+                  {dest.allocation.method !== 'emsrb'
+                    ? 'Only applies to EMSR-b.'
+                    : dest.allocation.demandBasis === 'target'
+                      ? 'Scales expected demand to TargetUnits — masks open wider on weak departures.'
+                      : 'Scales expected demand to capacity, like the profile model.'}
+                </p>
+              </div>
             </div>
           </SectionCard>
 

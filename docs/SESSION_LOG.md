@@ -86,7 +86,54 @@ hardcoded map.
   stuurt, met per sectie een "apply to all months"-knop. NewSeason toont de
   waarden van de startmaand, met maandlabel in de kop.
 
+### Stap 3 — EMSR-b allocatie
+Keuzes van Wolter: μ uit de profielpercentages (geherschaald over de open
+klassen), geschaald op **capaciteit**, σ = √μ (Poisson).
+
+- `masks.py`: `_emsrb_booking_limits()` implementeert EMSR-b (Belobaba). Per
+  klasse k wordt beschermd voor de klassen erboven:
+  `y_k = μ_agg + z·σ_agg` met `z = Φ⁻¹(1 − f_k/f̄)`, booking limit = capaciteit − y_k.
+  `Φ⁻¹` via `statistics.NormalDist` — geen nieuwe dependency.
+  `_demand_per_class()` herschaalt de profielshares over de open klassen, zodat
+  de te verdelen stoelen volledig tussen start-RBD en hoogste klasse landen.
+- Booking limits worden teruggerekend naar incrementele protections, zodat de
+  bestaande nesting-loop dezelfde AU_cum oplevert. Schema onveranderd: DB, de
+  push naar RAM en de charts hoefden niet mee.
+- Schakelbaar per bestemming: `"allocation": {"method": "emsrb"|"profile",
+  "demandBasis": "capacity"|"target"}`. Code-default is `profile`, zodat een
+  ouder config-bestand niet ineens van model wisselt; `seasonal-config.json`
+  staat op `emsrb`. Settings heeft een Allocation-kaart om te wisselen.
+- Zone-discounts spelen geen rol in EMSR-b: uniform per cabine, dus ze vallen weg
+  in de verhouding `f_k/f̄`.
+
+**Gevalideerd:** twee handberekeningen (2 en 3 klassen) exact gereproduceerd;
+Σ protections == capaciteit; AU(J) == capaciteit; gesloten klassen AU 0; AU_cum
+monotoon dalend; `protection == AU-verschil met de klasse eronder`; randgevallen
+(geen vraag boven, vlakke ladder, één klasse, leeg, extreme vraag).
+
+**Bevinding — lees dit vóór je hem op een echt seizoen zet.** Bij vraagbasis =
+capaciteit (μ_totaal == capaciteit) verdeelt EMSR-b méér capaciteit naar de lage
+klassen dan de profielladder: AU(C) 12 vs 18, C+D samen 40% van de capaciteit
+tegen 30% bij het profiel. In de bottom-up fill-simulatie levert dat ~12% lagere
+sim-revenue. EMSR-b wordt pas strakker dan het profiel als de vraag de capaciteit
+overstijgt (μ/cap ≥ 1,2 → AU(C) = 2; μ/cap ≥ 1,5 → C dicht).
+
+Twee oorzaken, allebei in de aannames en niet in de implementatie:
+1. `au_distribution` in de profielen is ooit handmatig getuned als AU-ladder,
+   niet als vraagvoorspelling. Als μ lezen we hem als "20% van de vraag zit in
+   klasse E" — dat is nooit gekalibreerd.
+2. `simulate_fill` verkoopt de target-units bottom-up zonder betalingsbereidheid;
+   spill en recapture bestaan er niet. Strakker onderin scoort daar dus altijd
+   beter. De simulatie is daarmee geen eerlijke scheidsrechter tussen twee
+   allocatiemodellen.
+
 ### Openstaand
+- **EMSR-b evalueren op echte data** (Wolter). Vergelijk `profile` vs `emsrb` op
+  één seizoen. Overweeg `demandBasis: "target"` — dan zet EMSR-b vraag tegenover
+  capaciteit zoals bedoeld, in plaats van vraag == capaciteit aan te nemen.
+- De echte volgende stap voor EMSR-b is μ uit PY-boekingen per RBD
+  (`BookingPassengers.RBD`, mét unconstraining) in plaats van de profielmix.
+  Zolang μ een handgetunede aanname is, optimaliseert EMSR-b tegen die aanname.
 - Analyse-scripts (`analyze_elasticity_*.py`, `zone_discount_analyzer.py`,
   `analyze_summer_config.py`) printen nog "COPY-PASTE → seasonal-config-summer.json"
   met een plat constraints/zoneDiscounts-blok. Dat parseert nog (platte vorm
