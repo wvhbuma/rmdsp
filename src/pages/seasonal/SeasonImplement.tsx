@@ -85,9 +85,14 @@ function ImplementView({ results }: { results: SeasonalResults }) {
 
   // sessionId van de geladen sessie → push richt zich op die sessie, niet op de
   // nieuwste die de server anders zou pakken.
+  //
+  // De datumrange gaat mee naar de server. Deed hij dat niet, dan telde het
+  // scherm de geselecteerde maand terwijl de push het hele seizoen overschreef.
   const mutationArgs = {
     routes: routes.length > 0 ? routes : undefined,
     cabins: cabins.length > 0 ? cabins : undefined,
+    dateFrom: start || undefined,
+    dateTo: end || undefined,
     sessionId: results._session?.id,
   }
 

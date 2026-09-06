@@ -268,6 +268,9 @@ export interface RunPipelineArgs {
 export interface ImplementArgs {
   routes?: string[]
   cabins?: string[]
+  /** Datumrange (YYYY-MM-DD, beide grenzen inclusief); leeg = geen grens. */
+  dateFrom?: string
+  dateTo?: string
   dryRun?: boolean
   apiKey?: string
   sessionId?: number | string

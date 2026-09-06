@@ -52,6 +52,17 @@ function monthKey(date: string): string {
   return date.slice(0, 7)
 }
 
+/** "2027-08" → "2027-08-01" */
+function monthStart(key: string): string {
+  return `${key}-01`
+}
+
+/** "2027-08" → "2027-08-31" (laatste dag, schrikkeljaar-proof). */
+function monthEnd(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  return `${key}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+}
+
 function monthLabel(key: string): string {
   const d = new Date(`${key}-01T00:00:00`)
   if (Number.isNaN(d.getTime())) return key
@@ -123,9 +134,13 @@ function TargetsView({
 
   // sessionId van de geladen sessie → push richt zich op die sessie, niet op de
   // nieuwste die de server anders zou pakken.
+  // Het maandfilter gaat als datumrange mee, zodat de push exact de rijen raakt
+  // die in de tabel staan. Zonder die grenzen pushte hij het hele seizoen.
   const pushArgs: ImplementArgs = {
     routes: route !== ALL ? [route] : undefined,
     cabins: cabin !== ALL ? [cabin] : undefined,
+    dateFrom: month !== ALL ? monthStart(month) : undefined,
+    dateTo: month !== ALL ? monthEnd(month) : undefined,
     sessionId: session?.id,
   }
 

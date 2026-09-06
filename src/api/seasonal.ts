@@ -167,6 +167,8 @@ interface ImplementResponseWire {
 export async function implementFares({
   routes,
   cabins,
+  dateFrom,
+  dateTo,
   dryRun = true,
   apiKey,
   sessionId,
@@ -175,6 +177,8 @@ export async function implementFares({
     dry_run: dryRun,
     routes,
     cabins,
+    date_from: dateFrom,
+    date_to: dateTo,
     api_key: apiKey,
     session_id: sessionId,
   })
@@ -213,6 +217,8 @@ interface PushTargetsWire {
 export async function pushTargets({
   routes,
   cabins,
+  dateFrom,
+  dateTo,
   dryRun = true,
   apiKey,
   sessionId,
@@ -221,6 +227,8 @@ export async function pushTargets({
     dry_run: dryRun,
     routes,
     cabins,
+    date_from: dateFrom,
+    date_to: dateTo,
     api_key: apiKey,
     session_id: sessionId,
   })
