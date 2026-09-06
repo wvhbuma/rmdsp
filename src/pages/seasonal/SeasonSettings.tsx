@@ -42,6 +42,7 @@ import {
   useSeasonalConfig,
   useSeasonalResults,
 } from '@/hooks/useSeasonal'
+import { useActiveSession } from '@/hooks/useActiveSession'
 import { DestinationTabs } from '@/components/seasonal/DestinationTabs'
 import { NumberInput } from '@/components/seasonal/NumberInput'
 import { SelectFilter } from '@/components/seasonal/SelectFilter'
@@ -209,6 +210,7 @@ export function SeasonSettings() {
   const results = useSeasonalResults()
   const runPipeline = useRunPipeline()
   const saveConfigMutation = useSaveConfig()
+  const { clearActiveSession } = useActiveSession()
   // Config staat los van sessies: primaire bron is GET /api/seasonal/config.
   const configQuery = useSeasonalConfig()
   const session = results.data?._session
@@ -300,6 +302,11 @@ export function SeasonSettings() {
           {
             onSuccess: () => {
               setConfirmRerun(false)
+              // Een vastgepinde sessie wissen, net als de wizard doet. Zonder dit
+              // blijven de pagina's het eerder geladen seizoen tonen en lijkt het
+              // alsof de re-run niets heeft gedaan — terwijl er wél een nieuwe
+              // sessie is aangemaakt.
+              clearActiveSession()
               void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
               navigate('/season/overview')
             },
