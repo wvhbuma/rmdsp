@@ -15,6 +15,7 @@ import type {
   ProfileName,
   SeasonalConfig,
   SeasonalConfigWire,
+  StartRbdProfiles,
   StartRbdTable,
 } from '@/types/seasonal'
 
@@ -60,40 +61,105 @@ export const DEFAULT_START_RBDS: Record<ProfileName, string> = {
   Low: 'B',
 }
 
-/** De "alle routes × alle cabines"-regel uit een startRbds-tabel. */
-export function defaultStartRbds(table: StartRbdTable | undefined): Record<ProfileName, string> {
-  const row = table?.['*']?.['*'] ?? {}
+/*
+ * Start-RBD voor één maand × cabine × profiel binnen de route-wildcard.
+ * Spiegelt resolve_start_rbd() in config.py: specifieker wint, maand vóór cabine.
+ */
+export function resolveStartRbd(
+  table: StartRbdTable | undefined,
+  month: string,
+  cabin: string,
+  profile: ProfileName,
+): string {
+  const byMonth = table?.['*'] ?? {}
+  for (const m of [month, '*']) {
+    for (const c of [cabin, '*']) {
+      const rbd = byMonth[m]?.[c]?.[profile]
+      if (rbd) return rbd
+    }
+  }
+  return DEFAULT_START_RBDS[profile]
+}
+
+/** De "alle cabines"-regel voor één maand — wat de UI als basisrij bewerkt. */
+export function defaultStartRbds(
+  table: StartRbdTable | undefined,
+  month: string,
+): Record<ProfileName, string> {
   return {
-    High: row.High ?? DEFAULT_START_RBDS.High,
-    Med: row.Med ?? DEFAULT_START_RBDS.Med,
-    Low: row.Low ?? DEFAULT_START_RBDS.Low,
+    High: resolveStartRbd(table, month, '*', 'High'),
+    Med: resolveStartRbd(table, month, '*', 'Med'),
+    Low: resolveStartRbd(table, month, '*', 'Low'),
   }
 }
 
 /** Compacte weergave "D / C / B" voor recap-tabellen. */
-export function formatDefaultStartRbds(table: StartRbdTable | undefined): string {
-  const r = defaultStartRbds(table)
+export function formatDefaultStartRbds(
+  table: StartRbdTable | undefined,
+  month: string,
+): string {
+  const r = defaultStartRbds(table, month)
   return `${r.High} / ${r.Med} / ${r.Low}`
+}
+
+/** Expliciet gezette waarde (zonder terugval) — onderscheidt "geërfd" van "gezet". */
+export function explicitStartRbd(
+  table: StartRbdTable | undefined,
+  month: string,
+  cabin: string,
+  profile: ProfileName,
+): string | undefined {
+  return table?.['*']?.[month]?.[cabin]?.[profile]
+}
+
+/*
+ * Zet of wist één cel. `value === null` verwijdert de override, waarna de cel
+ * weer erft. Lege cabine- en maandlagen worden opgeruimd zodat de config niet
+ * volloopt met lege objecten.
+ */
+export function setStartRbd(
+  table: StartRbdTable | undefined,
+  month: string,
+  cabin: string,
+  profile: ProfileName,
+  value: string | null,
+): StartRbdTable {
+  const next: StartRbdTable = JSON.parse(JSON.stringify(table ?? {}))
+  const byMonth = (next['*'] ??= {})
+  const byCabin = (byMonth[month] ??= {})
+  const profiles = (byCabin[cabin] ??= {})
+
+  if (value === null) {
+    delete profiles[profile]
+    if (Object.keys(profiles).length === 0) delete byCabin[cabin]
+    if (Object.keys(byCabin).length === 0) delete byMonth[month]
+  } else {
+    profiles[profile] = value
+  }
+  return next
 }
 
 interface StartRbdOverride {
   route: string
+  month: string
   cabin: string
-  rbds: Partial<Record<ProfileName, string>>
+  rbds: StartRbdProfiles
 }
 
 /*
- * Alle regels die afwijken van "*"/"*", als platte lijst. Die kunnen alleen via
- * een handmatig config-bestand ontstaan; de UI toont ze read-only zodat ze niet
- * onzichtbaar zijn.
+ * Regels op een andere route dan de wildcard. Die kunnen alleen via een
+ * handmatig config-bestand ontstaan; de UI toont ze read-only zodat ze niet
+ * onzichtbaar meedraaien.
  */
 export function startRbdOverrides(table: StartRbdTable | undefined): StartRbdOverride[] {
   if (!table) return []
   const out: StartRbdOverride[] = []
-  for (const [route, byCabin] of Object.entries(table)) {
-    for (const [cabin, rbds] of Object.entries(byCabin ?? {})) {
-      if (route === '*' && cabin === '*') continue
-      out.push({ route, cabin, rbds })
+  for (const [route, byMonth] of Object.entries(table)) {
+    if (route === '*') continue
+    for (const [month, byCabin] of Object.entries(byMonth ?? {})) {
+      for (const [cabin, rbds] of Object.entries(byCabin ?? {})) {
+        out.push({ route, month, cabin, rbds })
+      }
     }
   }
   return out
@@ -181,6 +247,44 @@ export function expandMonthly<T>(raw: unknown, fallback: T): Record<string, T> {
 }
 
 /*
+ * Herkent of een laag de maand-as is. Spiegelt _is_month_layer() in config.py:
+ * de oude vorm (route → cabine → profiel) heeft cabinecodes waar nu maanden
+ * staan, en profielwaarden zijn strings in plaats van objecten.
+ */
+function isMonthLayer(block: Record<string, unknown>): boolean {
+  for (const key of Object.keys(block)) {
+    if (key === '*') continue
+    return MONTH_SET.has(key)
+  }
+  const inner = block['*']
+  if (inner && typeof inner === 'object') {
+    return Object.values(inner as Record<string, unknown>).some(
+      (v) => v && typeof v === 'object',
+    )
+  }
+  return false
+}
+
+/*
+ * Brengt een startRbds-blok naar de vorm route → maand → cabine → profiel. Een
+ * blok zonder maand-as (de vorm van vóór deze wijziging) landt onder maand "*",
+ * zodat hij voor alle maanden blijft gelden.
+ */
+export function migrateStartRbds(raw: StartRbdTable | undefined): StartRbdTable {
+  if (!raw || Object.keys(raw).length === 0) {
+    return { '*': { '*': { '*': { ...DEFAULT_START_RBDS } } } }
+  }
+  const out: StartRbdTable = {}
+  for (const [route, block] of Object.entries(raw)) {
+    if (!block || typeof block !== 'object') continue
+    out[route] = isMonthLayer(block as Record<string, unknown>)
+      ? (block as Record<string, Record<string, StartRbdProfiles>>)
+      : { '*': block as unknown as Record<string, StartRbdProfiles> }
+  }
+  return out
+}
+
+/*
  * Normaliseer een config zoals hij van schijf of uit een geüpload bestand komt.
  * Na deze stap heeft elke bestemming alle twaalf maanden voor elasticiteiten,
  * constraints en zone-discounts — zodat de UI en de engine hetzelfde beeld
@@ -199,7 +303,7 @@ export function normalizeSeasonalConfig(wire: SeasonalConfigWire): SeasonalConfi
     destinations[name] = {
       routes: d.routes ?? [],
       yieldMultiplier: d.yieldMultiplier ?? 1.0,
-      startRbds: d.startRbds ?? { '*': { '*': { ...DEFAULT_START_RBDS } } },
+      startRbds: migrateStartRbds(d.startRbds),
       allocation: {
         method: d.allocation?.method ?? DEFAULT_ALLOCATION.method,
         demandBasis: d.allocation?.demandBasis ?? DEFAULT_ALLOCATION.demandBasis,

@@ -127,6 +127,31 @@ Twee oorzaken, allebei in de aannames en niet in de implementatie:
    beter. De simulatie is daarmee geen eerlijke scheidsrechter tussen twee
    allocatiemodellen.
 
+### Stap 4 — start-RBD ook per maand
+Keuze van Wolter: de start-RBD moet per bestemming × maand × cabine instelbaar
+zijn. De overige settings houden hun huidige assen.
+
+- `startRbds` krijgt een maand-as: route → maand → cabine → profiel, met `"*"` als
+  wildcard op alle drie. Resolutie van specifiek naar algemeen, waarbij route
+  zwaarder weegt dan maand en maand zwaarder dan cabine.
+- `parse_start_rbds()` herkent via `_is_month_layer()` of een blok de maand-as
+  heeft. De oude vorm (route → cabine → profiel) landt onder maand `"*"` en blijft
+  dus voor alle maanden gelden — bestaande config-bestanden werken door.
+- `resolve_start_rbd()` neemt nu een maand; `targets.apply_route_start_rbds()` en
+  de profile-loop in `server.py` leiden die af uit `DepartureDate`.
+- Frontend: `migrateStartRbds()` doet dezelfde migratie bij het inlezen.
+  De Settings-kaart toont per gekozen maand een raster van profiel × cabine, met
+  een "All cabins"-kolom en per cabine een cel die kan erven (grijze `— D —`) of
+  overschrijven. Plus "apply to all months".
+
+Gedragsneutraal: alle 12 maanden × 4 cabines × 3 profielen resolven naar D/C/B,
+gelijk aan de oude vaste map.
+
+**Gevalideerd:** wildcardketen en precedentie (6 gevallen), terugval (geen config,
+lege tabel, ontbrekende maand, typefout), de oude vorm zonder maand-as, en een
+echte round-trip — de UI-output door `esbuild`+node gegenereerd en daarna door de
+Python-parser gelezen, met identieke resolutie aan beide kanten.
+
 ### Openstaand
 - **EMSR-b evalueren op echte data** (Wolter). Vergelijk `profile` vs `emsrb` op
   één seizoen. Overweeg `demandBasis: "target"` — dan zet EMSR-b vraag tegenover

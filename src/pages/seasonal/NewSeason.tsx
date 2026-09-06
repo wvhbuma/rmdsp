@@ -878,7 +878,7 @@ function ActiveConfigRecap({ routes, start }: { routes: string[]; start: string 
               <td className="py-1 pr-3 text-rm-gray">
                 {d.constraints?.[month]?.maxYieldDecline ?? '—'}
               </td>
-              <td className="py-1 text-rm-gray">{formatDefaultStartRbds(d.startRbds)}</td>
+              <td className="py-1 text-rm-gray">{formatDefaultStartRbds(d.startRbds, month)}</td>
             </tr>
           ))}
         </tbody>

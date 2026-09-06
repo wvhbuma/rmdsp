@@ -154,14 +154,21 @@ export interface ProductsResponse {
 
 // ── Config ──
 
+export type StartRbdProfiles = Partial<Record<ProfileName, string>>
+
 /*
- * Start-RBD (laagste open bucket) per route → cabine → profiel. "*" is de
- * wildcard op beide assen; de resolutie loopt van specifiek naar algemeen:
- *   [route][cabine] → [route]["*"] → ["*"][cabine] → ["*"]["*"] → default
- * De UI vult vandaag alleen de "*"/"*"-regel; de overige lagen staan klaar voor
- * sturing per richting en per cabine.
+ * Start-RBD (laagste open bucket) per route → maand → cabine → profiel. "*" is
+ * de wildcard op alle drie de assen. Specifieker wint, en bij gelijke
+ * specificiteit weegt route zwaarder dan maand, en maand zwaarder dan cabine:
+ *
+ *   [route][maand][cabine] → [route][maand][*] → [route][*][cabine] → …
+ *   → ["*"]["*"]["*"] → default
+ *
+ * De UI bewerkt de route-wildcard, en daarbinnen per maand een raster van
+ * profiel × cabine. Route-specifieke regels komen uit een handmatig
+ * config-bestand en worden read-only getoond.
  */
-export type StartRbdTable = Record<string, Record<string, Partial<Record<ProfileName, string>>>>
+export type StartRbdTable = Record<string, Record<string, Record<string, StartRbdProfiles>>>
 
 export interface ConstraintSet {
   targetLfCeiling: number

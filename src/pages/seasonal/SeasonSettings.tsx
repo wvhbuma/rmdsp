@@ -30,7 +30,9 @@ import {
   NESTED_RBD_ORDER,
   PROFILE_ORDER,
   defaultStartRbds,
+  explicitStartRbd,
   normalizeSeasonalConfig,
+  setStartRbd,
   startRbdOverrides,
 } from '@/config/seasonal'
 import { ROUTE_CONFIG } from '@/config/routes'
@@ -74,9 +76,9 @@ function makeDestination(market: string, yieldMultiplier: number): DestinationCo
   return {
     routes: ROUTE_CONFIG[market]?.directions ?? [],
     yieldMultiplier,
-    // "*"/"*" = alle routes, alle cabines. Fijnmaziger regels (per richting of
-    // per cabine) kunnen in het config-bestand worden toegevoegd.
-    startRbds: { '*': { '*': { ...DEFAULT_START_RBDS } } },
+    // route "*" → maand → cabine "*". De UI bewerkt per maand een raster van
+    // profiel × cabine; route-specifieke regels komen uit het config-bestand.
+    startRbds: { '*': everyMonth({ '*': { ...DEFAULT_START_RBDS } }) },
     allocation: { ...DEFAULT_ALLOCATION },
     elasticities: makeElasticities(),
     constraints: everyMonth(DEFAULT_CONSTRAINTS),
@@ -112,6 +114,37 @@ function elasticityMeaning(e: number): Meaning {
 }
 
 /*
+ * Keuzelijst A–J. Met `inherited` toont hij die waarde grijs als placeholder:
+ * de cel erft dan van de "alle cabines"-rij en staat zelf niet in de config.
+ */
+function RbdSelect({
+  value,
+  inherited,
+  onChange,
+}: {
+  value: string
+  inherited?: string
+  onChange: (value: string | null) => void
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+      className={`rounded-md border border-rm-border bg-white px-2 py-1 font-body text-[13px] ${
+        inherited ? 'text-rm-gray' : 'text-rm-dark'
+      }`}
+    >
+      {inherited !== undefined && <option value="">— {inherited} —</option>}
+      {NESTED_RBD_ORDER.map((r) => (
+        <option key={r} value={r}>
+          {r}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+/*
  * Twaalf maanden los invullen is werk; deze knop kopieert de zichtbare maand
  * naar alle andere. Handig als een instelling seizoensonafhankelijk is.
  */
@@ -139,13 +172,13 @@ function StartRbdOverrides({ dest }: { dest: DestinationConfig }) {
   return (
     <div className="mt-3 rounded-lg border border-rm-border bg-rm-bg p-3">
       <div className="mb-1.5 font-display text-[11px] uppercase tracking-wide text-rm-gray">
-        Overrides from config file (read-only)
+        Route-specific rules from config file (read-only)
       </div>
       <ul className="space-y-0.5 font-body text-[13px] text-rm-gray">
         {overrides.map((o) => (
-          <li key={`${o.route}|${o.cabin}`}>
+          <li key={`${o.route}|${o.month}|${o.cabin}`}>
             <span className="font-medium text-rm-dark">
-              {o.route === '*' ? 'all routes' : o.route} ·{' '}
+              {o.route} · {o.month === '*' ? 'all months' : o.month} ·{' '}
               {o.cabin === '*' ? 'all cabins' : (CABIN_LABELS[o.cabin] ?? o.cabin)}
             </span>{' '}
             →{' '}
@@ -486,55 +519,82 @@ export function SeasonSettings() {
 
           <SectionCard
             title="Start RBD"
-            subtitle="Lowest open booking class per demand profile — everything below it is closed at publication"
+            subtitle={`Lowest open booking class — everything below it is closed at publication · ${month}`}
           >
             <table className="w-full border-collapse text-left font-body text-[13px]">
               <thead>
                 <tr className="bg-rm-gray-light text-rm-dark">
                   <th className="px-3 py-2 font-display font-semibold">Profile</th>
-                  <th className="px-3 py-2 font-display font-semibold">Start RBD</th>
+                  <th className="px-3 py-2 font-display font-semibold">All cabins</th>
+                  {CABIN_ORDER.map((c) => (
+                    <th key={c} className="px-3 py-2 font-display font-semibold">
+                      {CABIN_LABELS[c]}
+                    </th>
+                  ))}
                   <th className="px-3 py-2 font-display font-semibold">Closed below</th>
                 </tr>
               </thead>
               <tbody>
                 {PROFILE_ORDER.map((p) => {
-                  const current = defaultStartRbds(dest.startRbds)[p]
-                  const closed = NESTED_RBD_ORDER.slice(0, NESTED_RBD_ORDER.indexOf(current))
+                  const base = defaultStartRbds(dest.startRbds, month)[p]
+                  const closed = NESTED_RBD_ORDER.slice(0, NESTED_RBD_ORDER.indexOf(base))
                   return (
                     <tr key={p} className="border-t border-rm-border">
                       <td className="px-3 py-1.5 font-medium text-rm-dark">{p}</td>
                       <td className="px-3 py-1.5">
-                        <select
-                          value={current}
-                          onChange={(e) =>
+                        <RbdSelect
+                          value={base}
+                          onChange={(v) =>
                             updateActive((d) => ({
                               ...d,
-                              startRbds: {
-                                ...d.startRbds,
-                                '*': {
-                                  ...d.startRbds?.['*'],
-                                  '*': { ...defaultStartRbds(d.startRbds), [p]: e.target.value },
-                                },
-                              },
+                              startRbds: setStartRbd(d.startRbds, month, '*', p, v),
                             }))
                           }
-                          className="rounded-md border border-rm-border bg-white px-2 py-1 font-body text-[13px] text-rm-dark"
-                        >
-                          {NESTED_RBD_ORDER.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </td>
+                      {CABIN_ORDER.map((c) => {
+                        const own = explicitStartRbd(dest.startRbds, month, c, p)
+                        return (
+                          <td key={c} className="px-3 py-1.5">
+                            <RbdSelect
+                              value={own ?? ''}
+                              inherited={own === undefined ? base : undefined}
+                              onChange={(v) =>
+                                updateActive((d) => ({
+                                  ...d,
+                                  startRbds: setStartRbd(d.startRbds, month, c, p, v),
+                                }))
+                              }
+                            />
+                          </td>
+                        )
+                      })}
                       <td className="px-3 py-1.5 text-rm-gray">
-                        {closed.length > 0 ? closed.join(', ') : 'nothing — all classes open'}
+                        {closed.length > 0 ? closed.join(', ') : 'nothing'}
                       </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
+            <p className="mt-2 font-body text-xs text-rm-gray">
+              A cabin column set to “inherit” follows the All cabins value. “Closed below” reflects
+              the All cabins row.
+            </p>
+            <CopyToAllMonths
+              label="Apply these start RBDs to all months"
+              onApply={() =>
+                updateActive((d) => ({
+                  ...d,
+                  startRbds: {
+                    ...d.startRbds,
+                    '*': Object.fromEntries(
+                      MONTHS.map((m) => [m, structuredClone(d.startRbds?.['*']?.[month] ?? {})]),
+                    ),
+                  },
+                }))
+              }
+            />
             <StartRbdOverrides dest={dest} />
           </SectionCard>
 
