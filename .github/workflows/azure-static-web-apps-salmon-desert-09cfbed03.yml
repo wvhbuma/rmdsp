@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
-       id-token: write
        contents: read
     steps:
       - uses: actions/checkout@v4
@@ -45,18 +44,12 @@ jobs:
           VITE_ENTRA_AUTHORITY_URL: ${{ secrets.VITE_ENTRA_AUTHORITY_URL }}
           VITE_ENTRA_USER_FLOW: ${{ secrets.VITE_ENTRA_USER_FLOW }}
 
-      - name: Install OIDC Client from Core Package
-        run: npm install @actions/core@1.6.0 @actions/http-client
-
-      - name: Get Id Token
-        uses: actions/github-script@v7
-        id: idtoken
-        with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
-
+      # BEWUST GEEN OIDC. Met github_id_token authenticeert de deploy-actie via de
+      # GitHub-identiteit, en bepaalt Azure de doel-app aan de hand van de SWA die
+      # aan deze repo+branch gekoppeld is — het deployment-token wordt dan
+      # genegeerd. swa-rmdsp-tst is gekoppeld aan wvhbuma/rmdsp@main, dus elke
+      # deploy landde op de testomgeving, ongeacht welk token in de secret stond.
+      # Zonder github_id_token beslist het token, en dat wijst naar productie.
       - name: Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -68,7 +61,6 @@ jobs:
           api_location: ""
           output_location: ""     # niet gebruikt wanneer skip_app_build true is
           skip_app_build: true    # Oryx skippen; we hebben zelf gebouwd
-          github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
