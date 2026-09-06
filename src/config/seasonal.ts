@@ -246,6 +246,65 @@ export function expandMonthly<T>(raw: unknown, fallback: T): Record<string, T> {
   return out
 }
 
+/* ── Config-drift ─────────────────────────────────────────────────────────── */
+
+/*
+ * Een sessie bewaart de config waarmee hij is gedraaid. De Settings-pagina toont
+ * altijd de huidige config, los van welke sessie je bekijkt. Verschillen die twee,
+ * dan kijk je naar cijfers die met andere instellingen zijn berekend — zonder dat
+ * iets dat aangeeft. Deze functies maken dat verschil zichtbaar.
+ */
+
+const CONFIG_FIELDS = [
+  ['startRbds', 'Start RBD'],
+  ['allocation', 'Allocation'],
+  ['elasticities', 'Elasticities'],
+  ['constraints', 'Constraints'],
+  ['zoneDiscounts', 'Zone discounts'],
+  ['yieldMultiplier', 'Yield multiplier'],
+] as const
+
+/** JSON met gesorteerde sleutels, zodat volgorde geen vals verschil oplevert. */
+function canonical(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null'
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(',')}}`
+}
+
+export interface ConfigDrift {
+  destination: string
+  fields: string[]
+}
+
+/*
+ * Vergelijkt de config waarmee een sessie draaide met de huidige. Beide worden
+ * eerst genormaliseerd, zodat een oudere vorm geen vals alarm geeft. Bestemmingen
+ * die niet in de sessie zaten worden overgeslagen — die zeggen niets over dit
+ * resultaat.
+ */
+export function diffSeasonalConfig(
+  ranWith: SeasonalConfigWire | undefined,
+  current: SeasonalConfigWire | undefined,
+): ConfigDrift[] {
+  if (!ranWith?.destinations || !current?.destinations) return []
+  const a = normalizeSeasonalConfig(ranWith).destinations
+  const b = normalizeSeasonalConfig(current).destinations
+
+  const out: ConfigDrift[] = []
+  for (const [name, was] of Object.entries(a)) {
+    const now = b[name]
+    if (!now) continue
+    const fields = CONFIG_FIELDS.filter(
+      ([key]) => canonical(was[key]) !== canonical(now[key]),
+    ).map(([, label]) => label)
+    if (fields.length > 0) out.push({ destination: name, fields })
+  }
+  return out
+}
+
 /*
  * Herkent of een laag de maand-as is. Spiegelt _is_month_layer() in config.py:
  * de oude vorm (route → cabine → profiel) heeft cabinecodes waar nu maanden

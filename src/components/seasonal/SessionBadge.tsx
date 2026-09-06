@@ -5,9 +5,11 @@
  * (graceful fallback voor oudere API-responses). Status is een gekleurde badge.
  */
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { SeasonalSessionInfo } from '@/types/seasonal'
 import { useActiveSession } from '@/hooks/useActiveSession'
+import { useSeasonalConfig } from '@/hooks/useSeasonal'
+import { diffSeasonalConfig } from '@/config/seasonal'
 
 const STATUS_CLASS: Record<string, string> = {
   draft: 'bg-rm-gray',
@@ -58,27 +60,60 @@ export function SessionBadge({ session }: { session: SeasonalSessionInfo }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 font-body text-sm text-rm-gray">
-      <span>{parts.join(' · ')}</span>
-      {session.status && (
-        <span
-          className={`inline-block rounded px-1.5 py-0.5 font-display text-[10px] font-medium text-white ${
-            STATUS_CLASS[session.status] ?? 'bg-rm-gray'
-          }`}
-        >
-          {session.status}
-        </span>
-      )}
-      {hasActiveSession && (
-        <button
-          type="button"
-          onClick={resetToLatest}
-          title="Reset to the latest computed season"
-          className="font-display text-xs font-medium text-es-blue hover:underline"
-        >
-          Reset to latest ✕
-        </button>
-      )}
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2 font-body text-sm text-rm-gray">
+        <span>{parts.join(' · ')}</span>
+        {session.status && (
+          <span
+            className={`inline-block rounded px-1.5 py-0.5 font-display text-[10px] font-medium text-white ${
+              STATUS_CLASS[session.status] ?? 'bg-rm-gray'
+            }`}
+          >
+            {session.status}
+          </span>
+        )}
+        {hasActiveSession && (
+          <button
+            type="button"
+            onClick={resetToLatest}
+            title="Reset to the latest computed season"
+            className="font-display text-xs font-medium text-es-blue hover:underline"
+          >
+            Reset to latest ✕
+          </button>
+        )}
+      </div>
+      <ConfigDriftNotice session={session} />
     </div>
+  )
+}
+
+/*
+ * Deze cijfers zijn berekend met de config van het moment van draaien; Settings
+ * toont de huidige. Wijken die af, dan kijk je naar een resultaat dat niet meer
+ * bij je instellingen hoort — en dat is niet zichtbaar zonder deze melding.
+ */
+function ConfigDriftNotice({ session }: { session: SeasonalSessionInfo }) {
+  const configQuery = useSeasonalConfig()
+  const drift = diffSeasonalConfig(session.config, configQuery.data)
+
+  if (!session.config || configQuery.isPending || drift.length === 0) return null
+
+  return (
+    <p className="font-body text-xs text-rm-dark">
+      <span className="mr-1.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 font-display text-[10px] font-medium text-amber-800">
+        Settings changed
+      </span>
+      {drift.map((d, i) => (
+        <span key={d.destination}>
+          {i > 0 && '; '}
+          <span className="font-medium">{d.destination}</span> — {d.fields.join(', ')}
+        </span>
+      ))}
+      .{' '}
+      <Link to="/season/settings" className="font-medium text-es-blue hover:underline">
+        Re-run to apply
+      </Link>
+    </p>
   )
 }
