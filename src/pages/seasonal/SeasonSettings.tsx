@@ -10,7 +10,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DestinationConfig, SeasonalConfig } from '@/types/seasonal'
-import { CABIN_LABELS, CABIN_ORDER } from '@/config/seasonal'
+import {
+  CABIN_LABELS,
+  CABIN_ORDER,
+  DEFAULT_START_RBDS,
+  NESTED_RBD_ORDER,
+  PROFILE_ORDER,
+  defaultStartRbds,
+  startRbdOverrides,
+} from '@/config/seasonal'
 import { ROUTE_CONFIG } from '@/config/routes'
 import {
   useRunPipeline,
@@ -57,6 +65,9 @@ function makeDestination(market: string, yieldMultiplier: number): DestinationCo
   return {
     routes: ROUTE_CONFIG[market]?.directions ?? [],
     yieldMultiplier,
+    // "*"/"*" = alle routes, alle cabines. Fijnmaziger regels (per richting of
+    // per cabine) kunnen in het config-bestand worden toegevoegd.
+    startRbds: { '*': { '*': { ...DEFAULT_START_RBDS } } },
     elasticities: makeElasticities(),
     constraints: {
       targetLfCeiling: 0.95,
@@ -93,6 +104,38 @@ function elasticityMeaning(e: number): Meaning {
   if (a < 1.2) return { label: 'Average', cls: 'text-rm-gray' }
   if (a < 1.8) return { label: 'Elastic', cls: 'text-lf-orange' }
   return { label: 'Very elastic', cls: 'text-villain' }
+}
+
+/*
+ * Regels die afwijken van "alle routes × alle cabines". De backend leest ze wel,
+ * maar de UI bewerkt ze (nog) niet — ze komen uit een handmatig config-bestand.
+ * Hier read-only tonen, zodat ze niet onzichtbaar meedraaien.
+ */
+function StartRbdOverrides({ dest }: { dest: DestinationConfig }) {
+  const overrides = startRbdOverrides(dest.startRbds)
+  if (overrides.length === 0) return null
+
+  return (
+    <div className="mt-3 rounded-lg border border-rm-border bg-rm-bg p-3">
+      <div className="mb-1.5 font-display text-[11px] uppercase tracking-wide text-rm-gray">
+        Overrides from config file (read-only)
+      </div>
+      <ul className="space-y-0.5 font-body text-[13px] text-rm-gray">
+        {overrides.map((o) => (
+          <li key={`${o.route}|${o.cabin}`}>
+            <span className="font-medium text-rm-dark">
+              {o.route === '*' ? 'all routes' : o.route} ·{' '}
+              {o.cabin === '*' ? 'all cabins' : (CABIN_LABELS[o.cabin] ?? o.cabin)}
+            </span>{' '}
+            →{' '}
+            {PROFILE_ORDER.filter((p) => o.rbds[p])
+              .map((p) => `${p} ${o.rbds[p]}`)
+              .join(', ')}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 const CONSTRAINT_FIELDS: {
@@ -134,6 +177,8 @@ export function SeasonSettings() {
   const configApplied = useRef(false)
 
   const dirty = JSON.stringify(config) !== savedSnapshot
+  // Re-run = save + run; beide fasen tellen als "bezig".
+  const rerunBusy = saveConfigMutation.isPending || runPipeline.isPending
 
   useEffect(
     () => () => {
@@ -177,32 +222,35 @@ export function SeasonSettings() {
 
   const dest = config.destinations[activeDest]
 
+  /*
+   * Eén config-pad: de server leest de config ALTIJD van schijf
+   * (seasonal-config.json). Deze pagina is de enige schrijver. De run moet
+   * daarom in de onSuccess van de save — parallel afvuren zou de pipeline de
+   * oude versie van schijf kunnen laten lezen.
+   */
   function reRunWithSettings() {
     if (!session) return
-    console.log('Re-run config:', config)
-    // Sla de config ook op (los van de run); de server leest 'm van disk.
     saveConfigMutation.mutate(config, {
       onSuccess: () => {
         setSavedSnapshot(JSON.stringify(config))
         void queryClient.invalidateQueries({ queryKey: ['seasonal', 'config'] })
+        runPipeline.mutate(
+          {
+            name: session.name,
+            routes: session.routes,
+            start: session.seasonStart,
+            end: session.seasonEnd,
+          },
+          {
+            onSuccess: () => {
+              setConfirmRerun(false)
+              void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
+              navigate('/season/overview')
+            },
+          },
+        )
       },
     })
-    runPipeline.mutate(
-      {
-        name: session.name,
-        routes: session.routes,
-        start: session.seasonStart,
-        end: session.seasonEnd,
-        config,
-      },
-      {
-        onSuccess: () => {
-          setConfirmRerun(false)
-          void queryClient.invalidateQueries({ queryKey: ['seasonal', 'results'] })
-          navigate('/season/overview')
-        },
-      },
-    )
   }
 
   function updateActive(updater: (d: DestinationConfig) => DestinationConfig) {
@@ -295,11 +343,11 @@ export function SeasonSettings() {
           <button
             type="button"
             onClick={() => setConfirmRerun(true)}
-            disabled={!session || runPipeline.isPending}
+            disabled={!session || rerunBusy}
             title={session ? undefined : 'No session info available'}
             className="rounded-md border border-es-blue px-4 py-2 font-display text-sm font-medium text-es-blue hover:bg-es-blue/5 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {runPipeline.isPending ? 'Re-running…' : 'Re-run with these settings'}
+            {rerunBusy ? 'Re-running…' : 'Re-run with these settings'}
           </button>
           <button
             type="button"
@@ -330,6 +378,60 @@ export function SeasonSettings() {
                 Routes: {dest.routes.join(', ') || '—'}
               </span>
             </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Start RBD"
+            subtitle="Lowest open booking class per demand profile — everything below it is closed at publication"
+          >
+            <table className="w-full border-collapse text-left font-body text-[13px]">
+              <thead>
+                <tr className="bg-rm-gray-light text-rm-dark">
+                  <th className="px-3 py-2 font-display font-semibold">Profile</th>
+                  <th className="px-3 py-2 font-display font-semibold">Start RBD</th>
+                  <th className="px-3 py-2 font-display font-semibold">Closed below</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PROFILE_ORDER.map((p) => {
+                  const current = defaultStartRbds(dest.startRbds)[p]
+                  const closed = NESTED_RBD_ORDER.slice(0, NESTED_RBD_ORDER.indexOf(current))
+                  return (
+                    <tr key={p} className="border-t border-rm-border">
+                      <td className="px-3 py-1.5 font-medium text-rm-dark">{p}</td>
+                      <td className="px-3 py-1.5">
+                        <select
+                          value={current}
+                          onChange={(e) =>
+                            updateActive((d) => ({
+                              ...d,
+                              startRbds: {
+                                ...d.startRbds,
+                                '*': {
+                                  ...d.startRbds?.['*'],
+                                  '*': { ...defaultStartRbds(d.startRbds), [p]: e.target.value },
+                                },
+                              },
+                            }))
+                          }
+                          className="rounded-md border border-rm-border bg-white px-2 py-1 font-body text-[13px] text-rm-dark"
+                        >
+                          {NESTED_RBD_ORDER.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-1.5 text-rm-gray">
+                        {closed.length > 0 ? closed.join(', ') : 'nothing — all classes open'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <StartRbdOverrides dest={dest} />
           </SectionCard>
 
           <SectionCard
@@ -449,9 +551,9 @@ export function SeasonSettings() {
       {confirmRerun && session && (
         <ConfirmDialog
           title="Re-run pipeline"
-          message={`Re-run pipeline for ${session.name} with these settings?`}
-          confirmLabel="Re-run"
-          busy={runPipeline.isPending}
+          message={`Re-run pipeline for ${session.name}? The settings are saved first, then the pipeline reads them.`}
+          confirmLabel="Save & re-run"
+          busy={rerunBusy}
           onCancel={() => setConfirmRerun(false)}
           onConfirm={reRunWithSettings}
         />

@@ -153,9 +153,21 @@ export interface ProductsResponse {
 }
 
 // ── Config ──
+
+/*
+ * Start-RBD (laagste open bucket) per route → cabine → profiel. "*" is de
+ * wildcard op beide assen; de resolutie loopt van specifiek naar algemeen:
+ *   [route][cabine] → [route]["*"] → ["*"][cabine] → ["*"]["*"] → default
+ * De UI vult vandaag alleen de "*"/"*"-regel; de overige lagen staan klaar voor
+ * sturing per richting en per cabine.
+ */
+export type StartRbdTable = Record<string, Record<string, Partial<Record<ProfileName, string>>>>
+
 export interface DestinationConfig {
   routes: string[]
   yieldMultiplier: number
+  /** Optioneel: oudere config-bestanden hebben dit blok nog niet. */
+  startRbds?: StartRbdTable
   elasticities: Record<string, Record<CabinCode, number>> // month → cabin → ε
   constraints: {
     targetLfCeiling: number
@@ -179,12 +191,16 @@ export interface ProfileAssignment {
   profile: ProfileName
 }
 
+/*
+ * Geen `config` meer: de server leest de configuratie altijd van schijf
+ * (seasonal-config.json). Settings is de enige schrijver — zie
+ * SeasonSettings.reRunWithSettings.
+ */
 export interface RunPipelineArgs {
   name: string
   routes: string[]
   start: string
   end: string
-  config?: Partial<SeasonalConfig>
   profileAssignments?: ProfileAssignment[]
 }
 

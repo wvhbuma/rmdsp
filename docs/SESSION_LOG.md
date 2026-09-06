@@ -5,6 +5,70 @@ datum, wat gedaan, issues die we tegenkwamen, oplossingen.
 
 ---
 
+## Sessie — 2026-09-06 — Start-RBD per route + één config-pad
+
+**Doel:** de start-RBD van de seizoensmaskers instelbaar maken per route (stap 2),
+na eerst het configuratiepad te consolideren (stap 1). Stap 3 (EMSR-b-allocatie
+i.p.v. vaste profielpercentages) is besproken maar bewust NIET gebouwd.
+
+Branch: `claude/start-rbd-per-route`. Raakt ook `~/Seasonal Planning/` (Python,
+geen git-repo — backup van de gewijzigde bestanden staat in de scratchpad).
+
+### Uitgangssituatie
+Start-RBD was hardcoded op één plek: `server.py`, `{"High":"D","Med":"C","Low":"B"}`,
+zonder route-dimensie. Daarnaast twee config-paden (Settings stuurde de config
+inline mee, de wizard liet de server van schijf lezen) en zes config-bestanden
+met vier verschillende inhouden.
+
+### Stap 1 — één config-pad
+- `server.py`: `CONFIG_PATH` van `seasonal-config-summer.json` → `seasonal-config.json`
+  (die twee waren byte-identiek, dus gedragsneutraal).
+- `seasonal-config.json` aangevuld met Nov + Dec elasticiteiten per bestemming
+  (overgenomen uit `seasonal-config-winter.json`). Zonder die maanden vielen
+  winterruns stilzwijgend terug op de hardcoded defaults in `build_es_season`,
+  waardoor Nov/Dec uit code kwamen en Jan uit config.
+- Frontend: `RunPipelineArgs.config` verwijderd; Settings stuurt de config niet
+  meer inline mee. De run draait nu in de `onSuccess` van de save — parallel
+  afvuren kon de pipeline de oude versie van schijf laten lezen.
+- `NewSeason` toont vóór de run read-only welke config gaat gelden, met link naar
+  Settings.
+- Stale kopieën gearchiveerd naar `0. Archive/`: `seasonal_planner/server.py`
+  (dode 746-regel kopie die zelf naar een ánder config-bestand wees) en de twee
+  `seasonal_planner/seasonal-config*.json`.
+
+### Stap 2 — start-RBD per route × cabine × profiel
+- Config-vorm in `seasonal-config.json`, met `"*"` als wildcard op beide assen:
+  `"startRbds": {"*": {"*": {"High":"D","Med":"C","Low":"B"}}}`.
+  Resolutie: `[route][cabine]` → `[route]["*"]` → `["*"][cabine]` → `["*"]["*"]`
+  → `DEFAULT_START_RBDS`.
+- `config.py`: veld `RouteConfig.start_rbds` + `parse_start_rbds()` +
+  `resolve_start_rbd()` + `DEFAULT_START_RBDS`. Ongeldige RBD's worden gelogd en
+  genegeerd i.p.v. stil op "B" te vallen.
+- `server.py`: `_apply_overrides` vult `start_rbds` per route (analoog aan
+  `yield_multiplier`); de profile-assignment-loop gebruikt de resolver.
+- `targets.py`: `apply_route_start_rbds()` — één chokepoint, aangeroepen in
+  `pipeline.compute_targets()` ná `assign_profiles`. Dekt óók de auto-rule- en
+  fallback-paden, die anders route-blind zouden blijven.
+- Frontend: `StartRbdTable`-type, Start-RBD-sectie in Settings (per profiel, met
+  "closed below"-kolom), read-only weergave van fijnmazigere overrides uit het
+  config-bestand, en Profile/Start RBD-kolommen in SeasonTargets.
+
+Gedragsneutraal bij de huidige config: de `*`/`*`-waarden zijn gelijk aan de oude
+hardcoded map.
+
+### Openstaand
+- `seasonal-config-summer.json` / `-winter.json` in de projectroot worden nu
+  nergens meer gelezen, maar staan er nog. Analyse-scripts printen nog
+  "COPY-PASTE → seasonal-config-summer.json".
+- `ES_ROUTES` is een module-level dict; `_apply_overrides` muteert die instanties
+  (bestond al voor `yield_multiplier`). Waarden kunnen tussen runs blijven hangen
+  voor bestemmingen die niet in het seizoen zitten.
+- Stap 3: EMSR-b. Open keuzes: μ-bron (PY per RBD via `BookingPassengers.RBD`,
+  mét unconstraining, vs. profielpercentages als prior), verdelen op capaciteit
+  of op target-vraag, en de σ-aanname.
+
+---
+
 ## Sessie — 2026-06-02 — Multi-Leg Displacement Analysis
 
 **Doel:** nieuwe nav-groep "Multi-Leg Analysis" met 3 pagina's (Displacement

@@ -67,7 +67,6 @@ export function runPipeline({
   routes,
   start,
   end,
-  config,
   profileAssignments,
 }: RunPipelineArgs): Promise<PipelineResponse> {
   return postJson<PipelineResponse>('/api/seasonal/run', {
@@ -75,7 +74,6 @@ export function runPipeline({
     routes,
     start,
     end,
-    config,
     profile_assignments: profileAssignments,
   })
 }
